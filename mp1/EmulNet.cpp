@@ -4,6 +4,8 @@
  * DESCRIPTION: Emulated Network classes definition
  **********************************/
 
+ // EmulNet is basically the emulated network layer at each node.
+
 #include "EmulNet.h"
 
 /**
@@ -68,6 +70,9 @@ EmulNet::~EmulNet() {}
  * FUNCTION NAME: ENinit
  *
  * DESCRIPTION: Init the emulnet for this node
+ *
+ * The node id is the first 3 bits of the address and
+ * the port is the next 3 bits
  */
 void *EmulNet::ENinit(Address *myaddr, short port) {
 	// Initialize data structures for this member
@@ -151,6 +156,7 @@ int EmulNet::ENrecv(Address *myaddr, int (* enq)(void *, char *, int), struct ti
 	for( i = emulnet.currbuffsize - 1; i >= 0; i-- ) {
 		emsg = emulnet.buff[i];
 
+    // If the to address of the message matches the address of the node.
 		if ( 0 == strcmp(emsg->to.addr, myaddr->addr) ) {
 			sz = emsg->size;
 			tmp = (char *) malloc(sz * sizeof(char));

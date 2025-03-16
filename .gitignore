@@ -1,1 +1,5 @@
 *.DS_Store
+*.o
+*.log
+*/Application
+*/Grader.sh-e

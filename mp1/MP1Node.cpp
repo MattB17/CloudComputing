@@ -43,7 +43,8 @@ int MP1Node::recvLoop() {
     	return false;
     }
     else {
-    	return emulNet->ENrecv(&(memberNode->addr), enqueueWrapper, NULL, 1, &(memberNode->mp1q));
+    	return emulNet->ENrecv(
+				&(memberNode->addr), enqueueWrapper, NULL, 1, &(memberNode->mp1q));
     }
 }
 
@@ -131,6 +132,8 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
         memberNode->inGroup = true;
     }
     else {
+			  // So a message is a messageHdr, followed by the to address,
+				// followed by 1 byte, followed by a long representing the heartbeat.
         size_t msgsize = sizeof(MessageHdr) + sizeof(joinaddr->addr) + sizeof(long) + 1;
         msg = (MessageHdr *) malloc(msgsize * sizeof(char));
 
@@ -145,6 +148,8 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
 #endif
 
         // send JOINREQ message to introducer member
+				// you send from your own address to the joinaddr, specifying the msg
+				// and its size
         emulNet->ENsend(&memberNode->addr, joinaddr, (char *)msg, msgsize);
 
         free(msg);
@@ -160,9 +165,11 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
  * DESCRIPTION: Wind up this node and clean up state
  */
 int MP1Node::finishUpThisNode(){
-   /*
-    * Your code goes here
-    */
+   free(this->memberNode);
+	 this->emulNet->ENcleanup();
+	 free(this->emulNet);
+	 free(this->log);
+	 free(this->par);
 }
 
 /**
@@ -277,5 +284,5 @@ void MP1Node::initMemberListTable(Member *memberNode) {
 void MP1Node::printAddress(Address *addr)
 {
     printf("%d.%d.%d.%d:%d \n",  addr->addr[0],addr->addr[1],addr->addr[2],
-                                                       addr->addr[3], *(short*)&addr->addr[4]) ;    
+                                                       addr->addr[3], *(short*)&addr->addr[4]) ;
 }

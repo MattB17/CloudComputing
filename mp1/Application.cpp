@@ -127,6 +127,8 @@ void Application::mp1Run() {
 		/*
 		 * Receive messages from the network and queue them in the membership protocol queue
 		 */
+		// We start the ith node at time par->STEP_RATE*i so we check that the node
+		// has been previously started and not failed, then we do the recvLoop
 		if( par->getcurrtime() > (int)(par->STEP_RATE*i) && !(mp1[i]->getMemberNode()->bFailed) ) {
 			// Receive messages from the network and queue them
 			mp1[i]->recvLoop();
@@ -150,6 +152,8 @@ void Application::mp1Run() {
 		/*
 		 * Handle all the messages in your queue and send heartbeats
 		 */
+		// Again, only perform for nodes that were started earlier and have not
+		// failed
 		else if( par->getcurrtime() > (int)(par->STEP_RATE*i) && !(mp1[i]->getMemberNode()->bFailed) ) {
 			// handle messages and send heartbeats
 			mp1[i]->nodeLoop();
