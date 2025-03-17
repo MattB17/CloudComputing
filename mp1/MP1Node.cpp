@@ -222,9 +222,57 @@ void MP1Node::checkMessages() {
  * DESCRIPTION: Message handler for different message types
  */
 bool MP1Node::recvCallBack(void *env, char *data, int size ) {
-	/*
-	 * Your code goes here
-	 */
+	#ifdef DEBUGLOG
+	    static char logMsg[1024];
+	#endif
+
+	MessageHdr *msgHeader = (MessageHdr *)(data);
+	Address *senderAddr = (Address *)(data + sizeof(MessageHdr));
+	long *senderHeartbeat = (long *)(data + sizeof(MessageHdr) + sizeof(Address) + 1);
+
+	if (msgHeader->msgType == JOINREP)
+	{
+		// We received a reply to our join request, so we are now in the group.
+		memberNode->inGroup = true;
+
+		#ifdef DEBUGLOG
+		    sprintf(logMsg, "Received reply from %d.%d.%d.%d:%d for join request",
+			           senderAddr->addr[0],
+							   senderAddr->addr[1],
+							   senderAddr->addr[2],
+							   senderAddr->addr[3],
+							   *(short *)&senderAddr->addr[4]);
+				log->LOG(&memberNode->addr, logMsg);
+		#endif
+
+		addMembershipEntry(senderAddr, *senderHeartbeat);
+
+	}
+	else if (msgHeader->msgType == JOINREQ)
+	{
+		// Received a JOINREQ so need to send a JOINREP as the response.
+		int replyMsgSize = sizeof(MessageHdr) + sizeof(Address) + 1 + sizeof(long);
+		MessageHdr *replyMsg = (MessageHdr *) malloc(replyMsgSize  * sizeof(char));
+		replyMsg->msgType = JOINREP;
+		memcpy((char *)(replyMsg + 1), &(memberNode->addr), sizeof(Address));
+		memcpy((char *)(replyMsg + 1) + sizeof(Address) + 1, &memberNode->heartbeat, sizeof(long));
+
+		emulNet->ENsend(&(memberNode->addr), senderAddr, (char *)replyMsg, replyMsgSize);
+
+		#ifdef DEBUGLOG
+		    sprintf(logMsg,
+					"Sending reply message for join request to %d.%d.%d.%d:%d",
+			    senderAddr->addr[0],
+					senderAddr->addr[1],
+					senderAddr->addr[2],
+					senderAddr->addr[3],
+					*(short *)&senderAddr->addr[4]);
+				log->LOG(&memberNode->addr, logMsg);
+		#endif
+
+		addMembershipEntry(senderAddr, *senderHeartbeat);
+	}
+	return true;
 }
 
 /**
@@ -285,4 +333,14 @@ void MP1Node::printAddress(Address *addr)
 {
     printf("%d.%d.%d.%d:%d \n",  addr->addr[0],addr->addr[1],addr->addr[2],
                                                        addr->addr[3], *(short*)&addr->addr[4]) ;
+}
+
+void MP1Node::addMembershipEntry(Address* newAddr, long newHeartbeat)
+{
+	int id = *(int *)(&newAddr->addr);
+	short port = *(short *)(&newAddr->addr[4]);
+	MemberListEntry mle = MemberListEntry(
+		id, port, newHeartbeat, par->getcurrtime());
+	memberNode->memberList.push_back(mle);
+	log->logNodeAdd(&memberNode->addr, newAddr);
 }

@@ -20,6 +20,7 @@
  */
 #define TREMOVE 20
 #define TFAIL 5
+#define TGOSSIP 2
 
 /*
  * Note: You can change/add any functions in MP1Node.{h,cpp}
@@ -29,9 +30,13 @@
  * Message Types
  */
 enum MsgTypes{
+    // Join request
     JOINREQ,
+    // Join reply
     JOINREP,
-    DUMMYLASTMSGTYPE
+    // Gossip message
+    GOSSIP,
+    UNKNOWN
 };
 
 /**
@@ -75,6 +80,7 @@ public:
 	Address getJoinAddress();
 	void initMemberListTable(Member *memberNode);
 	void printAddress(Address *addr);
+  void addMembershipEntry(Address *memberAddr, long memberHeartbeat);
 	virtual ~MP1Node();
 };
 

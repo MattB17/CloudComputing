@@ -71,8 +71,8 @@ EmulNet::~EmulNet() {}
  *
  * DESCRIPTION: Init the emulnet for this node
  *
- * The node id is the first 3 bits of the address and
- * the port is the next 3 bits
+ * The node id is the first 4 bits of the address and
+ * the port is the next 2 bits
  */
 void *EmulNet::ENinit(Address *myaddr, short port) {
 	// Initialize data structures for this member
