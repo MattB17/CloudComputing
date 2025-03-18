@@ -48,15 +48,20 @@ typedef struct MessageHdr {
 	enum MsgTypes msgType;
 }MessageHdr;
 
-class MessageHandler {
+/**
+ * CLASS NAME: JoinMessage
+ *
+ * DESCRIPTION: Used to build join (JOINREP or JOINREQ) messages.
+ */
+class JoinMessage {
 private:
   size_t msgSize;
   MessageHdr *msg;
+
 public:
-  MessageHandler();
-  ~MessageHandler();
-  char* buildJoinMessage(
-    Address* fromAddr, MsgTypes&& joinType, long* heartbeat);
+  JoinMessage();
+  ~JoinMessage();
+  char* getMessage(Address* fromAddr, MsgTypes&& joinType, long* heartbeat);
   size_t getMessageSize() {
     return msgSize;
   }

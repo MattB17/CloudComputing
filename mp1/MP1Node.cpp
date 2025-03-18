@@ -11,20 +11,34 @@
  * Note: You can change/add any functions in MP1Node.{h,cpp}
  */
 
-MessageHandler::MessageHandler() {
+/**
+ * JoinMessage constructor.
+ * Initializes `msgSize` and allocates space for `msg`.
+ */
+JoinMessage::JoinMessage() {
 	// So a message is a messageHdr, followed by the to address,
 	// followed by 1 byte, followed by a long representing the heartbeat.
 	msgSize = sizeof(MessageHdr) + (6 * sizeof(char)) + 1 + sizeof(long);
 	msg = (MessageHdr *) malloc(msgSize * sizeof(char));
 }
 
-MessageHandler::~MessageHandler() {
+/**
+ * JoinMessage destructor.
+ * Frees the allocated `msg`.
+ */
+JoinMessage::~JoinMessage() {
 	free(msg);
 }
 
-char* MessageHandler::buildJoinMessage(Address* fromAddr,
-	                                     MsgTypes&& joinType,
-																			 long* heartbeat) {
+/**
+ * FUNCTION NAME: getMessage
+ * DESCRIPTION: Builds the join message based on the address `fromAddr`, the
+ * join type `joinType` and the provided heartbeat `heartbeat`.
+ */
+char* JoinMessage::getMessage(Address* fromAddr,
+	                            MsgTypes&& joinType,
+															long* heartbeat)
+{
 	msg->msgType = joinType;
 	memcpy((char *)(msg + 1), &fromAddr->addr, sizeof(fromAddr->addr));
 	memcpy(
@@ -153,8 +167,8 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
         memberNode->inGroup = true;
     }
     else {
-			MessageHandler msgHandler = MessageHandler();
-			char* requestMsg = msgHandler.buildJoinMessage(
+			JoinMessage joinMsg = JoinMessage();
+			char* requestMsg = joinMsg.getMessage(
 				&memberNode->addr, JOINREQ, &memberNode->heartbeat);
 
 #ifdef DEBUGLOG
@@ -166,7 +180,7 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
 				// you send from your own address to the joinaddr, specifying the msg
 				// and its size
         emulNet->ENsend(
-					&memberNode->addr, joinaddr, requestMsg, msgHandler.getMessageSize());
+					&memberNode->addr, joinaddr, requestMsg, joinMsg.getMessageSize());
     }
 
     return 1;
@@ -179,11 +193,13 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
  * DESCRIPTION: Wind up this node and clean up state
  */
 int MP1Node::finishUpThisNode(){
-   free(this->memberNode);
+   this->memberNode = nullptr;
 	 this->emulNet->ENcleanup();
-	 free(this->emulNet);
-	 free(this->log);
-	 free(this->par);
+	 this->emulNet = nullptr;
+	 this->log = nullptr;
+	 this->par = nullptr;
+
+	 return 0;
 }
 
 /**
@@ -265,12 +281,12 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
 	else if (msgHeader->msgType == JOINREQ)
 	{
 		// Received a JOINREQ so need to send a JOINREP as the response.
-		MessageHandler msgHandler = MessageHandler();
-		char* replyMsg = msgHandler.buildJoinMessage(
+		JoinMessage joinMsg = JoinMessage();
+		char* replyMsg = joinMsg.getMessage(
 			&memberNode->addr, JOINREP, &memberNode->heartbeat);
 
 		emulNet->ENsend(
-			&(memberNode->addr), senderAddr, replyMsg, msgHandler.getMessageSize());
+			&(memberNode->addr), senderAddr, replyMsg, joinMsg.getMessageSize());
 
 		#ifdef DEBUGLOG
 		    sprintf(logMsg,
