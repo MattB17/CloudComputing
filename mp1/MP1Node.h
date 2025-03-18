@@ -48,6 +48,20 @@ typedef struct MessageHdr {
 	enum MsgTypes msgType;
 }MessageHdr;
 
+class MessageHandler {
+private:
+  size_t msgSize;
+  MessageHdr *msg;
+public:
+  MessageHandler();
+  ~MessageHandler();
+  char* buildJoinMessage(
+    Address* fromAddr, MsgTypes&& joinType, long* heartbeat);
+  size_t getMessageSize() {
+    return msgSize;
+  }
+};
+
 /**
  * CLASS NAME: MP1Node
  *
@@ -80,7 +94,8 @@ public:
 	Address getJoinAddress();
 	void initMemberListTable(Member *memberNode);
 	void printAddress(Address *addr);
-  void addMembershipEntry(Address *memberAddr, long memberHeartbeat);
+  void addMembershipEntry(
+    Address *memberAddr, long memberHeartbeat, bool logAdd);
 	virtual ~MP1Node();
 };
 
