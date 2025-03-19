@@ -18,7 +18,7 @@
 /**
  * Macros
  */
-#define TREMOVE 20
+#define TCLEANUP 20
 #define TFAIL 5
 #define TGOSSIP 2
 
@@ -59,12 +59,45 @@ private:
   MessageHdr *msg;
 
 public:
-  JoinMessage();
+  JoinMessage(Address* fromAddr, MsgTypes&& joinType, long* heartbeat);
   ~JoinMessage();
-  char* getMessage(Address* fromAddr, MsgTypes&& joinType, long* heartbeat);
+  char* getMessage();
   size_t getMessageSize() {
     return msgSize;
   }
+};
+
+/*
+class GossipMessage {
+private:
+  size_t msgSize;
+  MessageHdr *msg;
+
+public:
+  GossipMessage(Address* fromAddr,
+                int currTime,
+                const std::vector<MemberListEntry>& memTable);
+  ~GossipMessage();
+  char* getMessage();
+  size_t getMessageSize() {
+    return msgSize;
+  }
+}
+*/
+
+/**
+ * CLASS NAME: AddressHandler
+ *
+ * DESCRIPTION: Handles address low level operations.
+ *              Used primarily for mapping from an address to id and port and
+ *              vice versa.
+ */
+class AddressHandler {
+public:
+  AddressHandler() {}
+  void addressFromIdAndPort(Address* addr, int id, short port);
+  int idFromAddress(Address* addr);
+  short portFromAddress(Address* addr);
 };
 
 /**
@@ -79,6 +112,7 @@ private:
 	Params *par;
 	Member *memberNode;
 	char NULLADDR[6];
+  AddressHandler *addressHandler;
 
 public:
 	MP1Node(Member *, Params *, EmulNet *, Log *, Address *);
@@ -99,8 +133,7 @@ public:
 	Address getJoinAddress();
 	void initMemberListTable(Member *memberNode);
 	void printAddress(Address *addr);
-  void addMembershipEntry(
-    Address *memberAddr, long memberHeartbeat, bool logAdd);
+  void addMembershipEntry(Address *memberAddr, long memberHeartbeat);
 	virtual ~MP1Node();
 };
 

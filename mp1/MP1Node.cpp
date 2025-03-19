@@ -15,11 +15,18 @@
  * JoinMessage constructor.
  * Initializes `msgSize` and allocates space for `msg`.
  */
-JoinMessage::JoinMessage() {
+JoinMessage::JoinMessage(Address* fromAddr,
+	                       MsgTypes&& joinType,
+												 long* heartbeat)
+{
 	// So a message is a messageHdr, followed by the to address,
 	// followed by 1 byte, followed by a long representing the heartbeat.
 	msgSize = sizeof(MessageHdr) + (6 * sizeof(char)) + 1 + sizeof(long);
 	msg = (MessageHdr *) malloc(msgSize * sizeof(char));
+	msg->msgType = joinType;
+	memcpy((char *)(msg + 1), &fromAddr->addr, sizeof(fromAddr->addr));
+	memcpy(
+		(char *)(msg + 1) + 1 + sizeof(fromAddr->addr), heartbeat, sizeof(long));
 }
 
 /**
@@ -32,19 +39,48 @@ JoinMessage::~JoinMessage() {
 
 /**
  * FUNCTION NAME: getMessage
+ *
  * DESCRIPTION: Builds the join message based on the address `fromAddr`, the
  * join type `joinType` and the provided heartbeat `heartbeat`.
  */
-char* JoinMessage::getMessage(Address* fromAddr,
-	                            MsgTypes&& joinType,
-															long* heartbeat)
+char* JoinMessage::getMessage()
 {
-	msg->msgType = joinType;
-	memcpy((char *)(msg + 1), &fromAddr->addr, sizeof(fromAddr->addr));
-	memcpy(
-		(char *)(msg + 1) + 1 + sizeof(fromAddr->addr), heartbeat, sizeof(long));
 	return (char *) msg;
 }
+
+/**
+ * FUNCTION NAME: addressFromIdAndPort
+ *
+ * DESCRIPTION: builds Address `addr` from the supplied `id` and `port`.
+ */
+void AddressHandler::addressFromIdAndPort(Address* addr, int id, short port)
+{
+	*(int *)(addr->addr) = id;
+	*(short *)(&addr->addr[4]) = port;
+	return;
+}
+
+/**
+ * FUNCTION NAME: idFromAddress
+ *
+ * DESCRIPTION: extracts the id portion of `addr`.
+ */
+int AddressHandler::idFromAddress(Address *addr)
+{
+	return *(int *)(addr->addr);
+}
+
+/**
+ * FUNCTION NAME: portFromAddress
+ *
+ * DESCRIPTION: extracts the port portion of `addr`.
+ */
+short AddressHandler::portFromAddress(Address *addr)
+{
+	return *(short *)(&addr->addr[4]);
+}
+
+// TODO: implement GossipMessage
 
 /**
  * Overloaded Constructor of the MP1Node class
@@ -60,6 +96,7 @@ MP1Node::MP1Node(Member *member, Params *params, EmulNet *emul, Log *log, Addres
 	this->log = log;
 	this->par = params;
 	this->memberNode->addr = *address;
+	this->addressHandler = new AddressHandler();
 }
 
 /**
@@ -129,19 +166,13 @@ void MP1Node::nodeStart(char *servaddrstr, short servport) {
  * DESCRIPTION: Find out who I am and start up
  */
 int MP1Node::initThisNode(Address *joinaddr) {
-	/*
-	 * This function is partially implemented and may require changes
-	 */
-	int id = *(int*)(&memberNode->addr.addr);
-	int port = *(short*)(&memberNode->addr.addr[4]);
-
 	memberNode->bFailed = false;
 	memberNode->inited = true;
 	memberNode->inGroup = false;
     // node is up!
 	memberNode->nnb = 0;
 	memberNode->heartbeat = 0;
-	memberNode->pingCounter = TFAIL;
+	memberNode->pingCounter = TGOSSIP;
 	memberNode->timeOutCounter = -1;
   initMemberListTable(memberNode);
 
@@ -167,9 +198,9 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
         memberNode->inGroup = true;
     }
     else {
-			JoinMessage joinMsg = JoinMessage();
-			char* requestMsg = joinMsg.getMessage(
+			JoinMessage joinMsg = JoinMessage(
 				&memberNode->addr, JOINREQ, &memberNode->heartbeat);
+			memberNode->heartbeat++;
 
 #ifdef DEBUGLOG
         sprintf(s, "Trying to join...");
@@ -179,8 +210,8 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
         // send JOINREQ message to introducer member
 				// you send from your own address to the joinaddr, specifying the msg
 				// and its size
-        emulNet->ENsend(
-					&memberNode->addr, joinaddr, requestMsg, joinMsg.getMessageSize());
+        emulNet->ENsend(&memberNode->addr, joinaddr,
+					              joinMsg.getMessage(), joinMsg.getMessageSize());
     }
 
     return 1;
@@ -198,6 +229,7 @@ int MP1Node::finishUpThisNode(){
 	 this->emulNet = nullptr;
 	 this->log = nullptr;
 	 this->par = nullptr;
+	 delete this->addressHandler;
 
 	 return 0;
 }
@@ -271,22 +303,22 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
 							   senderAddr->addr[1],
 							   senderAddr->addr[2],
 							   senderAddr->addr[3],
-							   *(short *)&senderAddr->addr[4]);
+								 addressHandler->portFromAddress(senderAddr));
 				log->LOG(&memberNode->addr, logMsg);
 		#endif
 
-		addMembershipEntry(senderAddr, *senderHeartbeat, true);
+		addMembershipEntry(senderAddr, *senderHeartbeat);
 
 	}
 	else if (msgHeader->msgType == JOINREQ)
 	{
 		// Received a JOINREQ so need to send a JOINREP as the response.
-		JoinMessage joinMsg = JoinMessage();
-		char* replyMsg = joinMsg.getMessage(
+		JoinMessage joinMsg = JoinMessage(
 			&memberNode->addr, JOINREP, &memberNode->heartbeat);
+		memberNode->heartbeat++;
 
-		emulNet->ENsend(
-			&(memberNode->addr), senderAddr, replyMsg, joinMsg.getMessageSize());
+		emulNet->ENsend(&(memberNode->addr), senderAddr,
+		                joinMsg.getMessage(), joinMsg.getMessageSize());
 
 		#ifdef DEBUGLOG
 		    sprintf(logMsg,
@@ -295,29 +327,58 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
 					senderAddr->addr[1],
 					senderAddr->addr[2],
 					senderAddr->addr[3],
-					*(short *)&senderAddr->addr[4]);
+					addressHandler->portFromAddress(senderAddr));
 				log->LOG(&memberNode->addr, logMsg);
 		#endif
 
-		addMembershipEntry(senderAddr, *senderHeartbeat, true);
+		addMembershipEntry(senderAddr, *senderHeartbeat);
 	}
+	// TODO: handle gossip message
 	return true;
 }
 
 /**
  * FUNCTION NAME: nodeLoopOps
  *
- * DESCRIPTION: Check if any node hasn't responded within a timeout period and then delete
- * 				the nodes
- * 				Propagate your membership list
+ * DESCRIPTION: Check if any node hasn't responded within a timeout period
+ *              and then delete the nodes.
+ * 				      Propagate your membership list
  */
 void MP1Node::nodeLoopOps() {
+	// Remove any nodes that have not been updated in the last TCLEANUP
+	// time steps.
+	std::vector<MemberListEntry> cleanedMemberList;
+	for (int mleIdx = 0; mleIdx < memberNode->memberList.size(); mleIdx++) {
+		MemberListEntry *mle = &memberNode->memberList[mleIdx];
+		if (par->getcurrtime() - mle->gettimestamp() < TCLEANUP) {
+			cleanedMemberList.push_back(*mle);
+		}
+		else {
+			Address entryAddr;
+			addressHandler->addressFromIdAndPort(
+				&entryAddr, mle->getid(), mle->getport());
+			log->logNodeRemove(&memberNode->addr, &entryAddr);
+		}
+	}
+	memberNode->memberList = cleanedMemberList;
 
-	/*
-	 * Your code goes here
-	 */
+	// Propagate the membership list if it's time to gossip again.
+	if (memberNode->pingCounter > 0)
+	{
+		memberNode->pingCounter--;
+	}
+  else
+	{
+		// Time to gossip again.
+		// Start by updating your own heartbeat.
+		memberNode->myPos->setheartbeat(memberNode->heartbeat);
+		memberNode->heartbeat++;
+		// Next construct the gossip message.
 
-    return;
+    // Reset the ping counter.
+		memberNode->pingCounter = TGOSSIP;
+	}
+	return;
 }
 
 /**
@@ -338,8 +399,7 @@ Address MP1Node::getJoinAddress() {
     Address joinaddr;
 
     memset(&joinaddr, 0, sizeof(Address));
-    *(int *)(&joinaddr.addr) = 1;
-    *(short *)(&joinaddr.addr[4]) = 0;
+		addressHandler->addressFromIdAndPort(&joinaddr, 1, 0);
 
     return joinaddr;
 }
@@ -352,7 +412,8 @@ Address MP1Node::getJoinAddress() {
 void MP1Node::initMemberListTable(Member *memberNode) {
 	memberNode->memberList.clear();
 	// Add self to the table
-	addMembershipEntry(&memberNode->addr, 0, false);
+	addMembershipEntry(&memberNode->addr, memberNode->heartbeat);
+	memberNode->myPos = memberNode->memberList.begin();
 }
 
 /**
@@ -363,19 +424,15 @@ void MP1Node::initMemberListTable(Member *memberNode) {
 void MP1Node::printAddress(Address *addr)
 {
     printf("%d.%d.%d.%d:%d \n",  addr->addr[0],addr->addr[1],addr->addr[2],
-                                                       addr->addr[3], *(short*)&addr->addr[4]) ;
+           addr->addr[3], addressHandler->portFromAddress(addr));
 }
 
-void MP1Node::addMembershipEntry(Address* newAddr,
-	                               long newHeartbeat,
-																 bool logAdd)
+void MP1Node::addMembershipEntry(Address* newAddr, long newHeartbeat)
 {
-	int id = *(int *)(&newAddr->addr);
-	short port = *(short *)(&newAddr->addr[4]);
+	int id = addressHandler->idFromAddress(newAddr);
+	short port = addressHandler->portFromAddress(newAddr);
 	MemberListEntry mle = MemberListEntry(
 		id, port, newHeartbeat, par->getcurrtime());
 	memberNode->memberList.push_back(mle);
-	if (logAdd) {
-	  log->logNodeAdd(&memberNode->addr, newAddr);
-  }
+	log->logNodeAdd(&memberNode->addr, newAddr);
 }
