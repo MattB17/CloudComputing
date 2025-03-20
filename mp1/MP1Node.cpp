@@ -13,7 +13,9 @@
 
 /**
  * JoinMessage constructor.
- * Initializes `msgSize` and allocates space for `msg`.
+ *
+ * DESCRIPTION: Builds the message based on the source address `fromAddr`, the
+ * heartbeat `heartbeat`, and the join message type `joinType`
  */
 JoinMessage::JoinMessage(Address* fromAddr,
 	                       MsgTypes&& joinType,
@@ -21,29 +23,83 @@ JoinMessage::JoinMessage(Address* fromAddr,
 {
 	// So a message is a messageHdr, followed by the to address,
 	// followed by 1 byte, followed by a long representing the heartbeat.
-	msgSize = sizeof(MessageHdr) + (6 * sizeof(char)) + 1 + sizeof(long);
+	msgSize = sizeof(MessageHdr) + sizeof(fromAddr->addr) + 1 + sizeof(long);
 	msg = (MessageHdr *) malloc(msgSize * sizeof(char));
 	msg->msgType = joinType;
 	memcpy((char *)(msg + 1), &fromAddr->addr, sizeof(fromAddr->addr));
 	memcpy(
-		(char *)(msg + 1) + 1 + sizeof(fromAddr->addr), heartbeat, sizeof(long));
+		(char *)(msg + 1) + 1 + sizeof(fromAddr->addr), &heartbeat, sizeof(long));
 }
 
 /**
  * JoinMessage destructor.
  * Frees the allocated `msg`.
  */
-JoinMessage::~JoinMessage() {
+JoinMessage::~JoinMessage()
+{
 	free(msg);
 }
 
 /**
  * FUNCTION NAME: getMessage
  *
- * DESCRIPTION: Builds the join message based on the address `fromAddr`, the
- * join type `joinType` and the provided heartbeat `heartbeat`.
+ * DESCRIPTION: Returns the message.
  */
 char* JoinMessage::getMessage()
+{
+	return (char *) msg;
+}
+
+GossipMessage::GossipMessage(Address* fromAddr,
+                             int currTime,
+													   std::vector<MemberListEntry>& memTable)
+{
+	// We want to send only the active nodes.
+	std::vector<MemberListEntry> activeNodes;
+	for (auto itr = memTable.begin(); itr != memTable.end(); itr++) {
+		if (currTime - itr->gettimestamp() <= TFAIL) {
+			activeNodes.push_back(*itr);
+		}
+	}
+  long numEntries = activeNodes.size();
+
+	// Will have message header, followed by source address, 1 bit for null
+	// terminator, and then the number of entries in the membership table.
+	msgSize = sizeof(MessageHdr) + sizeof(fromAddr->addr) + 1 + sizeof(long);
+	// For each active entry in the membership table we will send its id, port,
+	// and heartbeat (we don't need to send the timestamp as that is local time
+  // and won't be used by the receiving process)
+	msgSize += (numEntries * (sizeof(long) + sizeof(short) + sizeof(long)));
+
+  // Allocate space for the message and set the message type, from address,
+	// and size of membership table.
+	msg = (MessageHdr *) malloc(msgSize * sizeof(char));
+	msg->msgType = GOSSIP;
+  memcpy((char *)(msg + 1), &fromAddr->addr, sizeof(fromAddr->addr));
+	memcpy(
+		(char *)(msg + 1) + sizeof(fromAddr->addr) + 1, &numEntries, sizeof(long));
+
+	// Now fill in all the member entries.
+	size_t offset =sizeof(fromAddr->addr) + 1 + sizeof(long);
+	for (auto itr = activeNodes.begin(); itr != activeNodes.end(); itr++) {
+		int id = itr->getid();
+		short port = itr->getport();
+		long heartbeat = itr->getheartbeat();
+		memcpy((char *)(msg+1) + offset, &id, sizeof(long));
+		offset += sizeof(long);
+		memcpy((char *)(msg+1) + offset, &port, sizeof(short));
+		offset += sizeof(short);
+		memcpy((char *)(msg+1) + offset, &heartbeat, sizeof(long));
+		offset += sizeof(long);
+	}
+}
+
+GossipMessage::~GossipMessage()
+{
+	free(msg);
+}
+
+char* GossipMessage::getMessage()
 {
 	return (char *) msg;
 }
@@ -224,6 +280,7 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
  * DESCRIPTION: Wind up this node and clean up state
  */
 int MP1Node::finishUpThisNode(){
+	 this->memberNode->inGroup = false;
    this->memberNode = nullptr;
 	 this->emulNet->ENcleanup();
 	 this->emulNet = nullptr;
@@ -358,6 +415,7 @@ void MP1Node::nodeLoopOps() {
 			addressHandler->addressFromIdAndPort(
 				&entryAddr, mle->getid(), mle->getport());
 			log->logNodeRemove(&memberNode->addr, &entryAddr);
+      memberNode->nnb--;
 		}
 	}
 	memberNode->memberList = cleanedMemberList;
@@ -374,6 +432,8 @@ void MP1Node::nodeLoopOps() {
 		memberNode->myPos->setheartbeat(memberNode->heartbeat);
 		memberNode->heartbeat++;
 		// Next construct the gossip message.
+		GossipMessage gossipMsg = GossipMessage(
+			&memberNode->addr, par->getcurrtime(), memberNode->memberList);
 
     // Reset the ping counter.
 		memberNode->pingCounter = TGOSSIP;
@@ -435,4 +495,5 @@ void MP1Node::addMembershipEntry(Address* newAddr, long newHeartbeat)
 		id, port, newHeartbeat, par->getcurrtime());
 	memberNode->memberList.push_back(mle);
 	log->logNodeAdd(&memberNode->addr, newAddr);
+  memberNode->nnb++;
 }

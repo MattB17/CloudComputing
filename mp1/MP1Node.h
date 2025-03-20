@@ -67,7 +67,12 @@ public:
   }
 };
 
-/*
+/**
+ * CLASS NAME: GossipMessage
+ *
+ * DESCRIPTION: Used to build a gossip message that encapsulates the
+ *              membership table.
+ */
 class GossipMessage {
 private:
   size_t msgSize;
@@ -76,14 +81,13 @@ private:
 public:
   GossipMessage(Address* fromAddr,
                 int currTime,
-                const std::vector<MemberListEntry>& memTable);
+                std::vector<MemberListEntry>& memTable);
   ~GossipMessage();
   char* getMessage();
   size_t getMessageSize() {
     return msgSize;
   }
-}
-*/
+};
 
 /**
  * CLASS NAME: AddressHandler
