@@ -79,9 +79,7 @@ private:
   MessageHdr *msg;
 
 public:
-  GossipMessage(Address* fromAddr,
-                int currTime,
-                std::vector<MemberListEntry>& memTable);
+  GossipMessage(Address* fromAddr, std::vector<MemberListEntry>& memTable);
   ~GossipMessage();
   char* getMessage();
   size_t getMessageSize() {
@@ -117,6 +115,7 @@ private:
 	Member *memberNode;
 	char NULLADDR[6];
   AddressHandler *addressHandler;
+  double gossipProp;
 
 public:
 	MP1Node(Member *, Params *, EmulNet *, Log *, Address *);

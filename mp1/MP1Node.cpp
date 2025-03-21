@@ -6,6 +6,7 @@
  **********************************/
 
 #include "MP1Node.h"
+#include <random>
 
 /*
  * Note: You can change/add any functions in MP1Node.{h,cpp}
@@ -51,17 +52,9 @@ char* JoinMessage::getMessage()
 }
 
 GossipMessage::GossipMessage(Address* fromAddr,
-                             int currTime,
 													   std::vector<MemberListEntry>& memTable)
 {
-	// We want to send only the active nodes.
-	std::vector<MemberListEntry> activeNodes;
-	for (auto itr = memTable.begin(); itr != memTable.end(); itr++) {
-		if (currTime - itr->gettimestamp() <= TFAIL) {
-			activeNodes.push_back(*itr);
-		}
-	}
-  long numEntries = activeNodes.size();
+  long numEntries = memTable.size();
 
 	// Will have message header, followed by source address, 1 bit for null
 	// terminator, and then the number of entries in the membership table.
@@ -81,7 +74,7 @@ GossipMessage::GossipMessage(Address* fromAddr,
 
 	// Now fill in all the member entries.
 	size_t offset =sizeof(fromAddr->addr) + 1 + sizeof(long);
-	for (auto itr = activeNodes.begin(); itr != activeNodes.end(); itr++) {
+	for (auto itr = memTable.begin(); itr != memTable.end(); itr++) {
 		int id = itr->getid();
 		short port = itr->getport();
 		long heartbeat = itr->getheartbeat();
@@ -153,6 +146,7 @@ MP1Node::MP1Node(Member *member, Params *params, EmulNet *emul, Log *log, Addres
 	this->par = params;
 	this->memberNode->addr = *address;
 	this->addressHandler = new AddressHandler();
+	this->gossipProp = 0.5;
 }
 
 /**
@@ -431,9 +425,48 @@ void MP1Node::nodeLoopOps() {
 		// Start by updating your own heartbeat.
 		memberNode->myPos->setheartbeat(memberNode->heartbeat);
 		memberNode->heartbeat++;
+
+		// We want to send only the active nodes.
+		std::vector<MemberListEntry> activeNodes;
+		for (auto itr = memberNode->memberList.begin();
+		     itr != memberNode->memberList.end();
+				 itr++)
+		{
+			if (par->getcurrtime() - itr->gettimestamp() <= TFAIL) {
+				activeNodes.push_back(*itr);
+			}
+		}
+
 		// Next construct the gossip message.
-		GossipMessage gossipMsg = GossipMessage(
-			&memberNode->addr, par->getcurrtime(), memberNode->memberList);
+		GossipMessage gossipMsg = GossipMessage(&memberNode->addr, activeNodes);
+
+		// Send to a random subset of active neighbours
+		std::random_device rd;
+		std::mt19937 g(rd());
+		std::shuffle(activeNodes.begin(), activeNodes.end(), g);
+		int neighborsInGossip = (int)(gossipProp * activeNodes.size());
+		for (int i = 0; i < neighborsInGossip; i++) {
+			Address destAddr;
+			addressHandler->addressFromIdAndPort(
+				&destAddr, activeNodes[i].getid(), activeNodes[i].getport());
+			if (destAddr == memberNode->addr) {
+				continue;
+			}
+			emulNet->ENsend(&memberNode->addr, &destAddr,
+					            gossipMsg.getMessage(), gossipMsg.getMessageSize());
+
+			#ifdef DEBUGLOG
+				char logMsg[1024];
+			  sprintf(logMsg,
+					  		"Sending gossip message to %d.%d.%d.%d:%d",
+						  	destAddr.addr[0],
+							  destAddr.addr[1],
+								destAddr.addr[2],
+								destAddr.addr[3],
+								addressHandler->portFromAddress(&destAddr));
+				log->LOG(&memberNode->addr, logMsg);
+			#endif
+		}
 
     // Reset the ping counter.
 		memberNode->pingCounter = TGOSSIP;
