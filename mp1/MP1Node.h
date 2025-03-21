@@ -117,6 +117,13 @@ private:
   AddressHandler *addressHandler;
   double gossipProp;
 
+  void logEvent(const char* eventMsg, Address* addr);
+  void logMsg(const char* msg);
+  void cleanMemberList();
+  std::vector<MemberListEntry> getActiveNodes();
+  void sendGossip(std::vector<MemberListEntry>& activeNodes,
+                  GossipMessage& gossipMsg);
+
 public:
 	MP1Node(Member *, Params *, EmulNet *, Log *, Address *);
 	Member * getMemberNode() {
