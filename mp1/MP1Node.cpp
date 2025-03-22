@@ -340,34 +340,50 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
 	    static char logMsg[1024];
 	#endif
 
+  // Extract the message header and the address of the sender.
 	MessageHdr *msgHeader = (MessageHdr *)(data);
 	Address *senderAddr = (Address *)(data + sizeof(MessageHdr));
-	long *senderHeartbeat = (long *)(data + sizeof(MessageHdr) + sizeof(Address) + 1);
 
-	if (msgHeader->msgType == JOINREP)
+  if (msgHeader->msgType == GOSSIP)
 	{
-		// We received a reply to our join request, so we are now in the group.
-		memberNode->inGroup = true;
-		logEvent("Received reply from %d.%d.%d.%d:%d for join request", senderAddr);
-
-		addMembershipEntry(senderAddr, *senderHeartbeat);
-
+		// If it's a gossip message then the next long is the size of the
+		// sender's member table.
+		long *memTableSize = (long *)(
+			data + sizeof(MessageHdr) + sizeof(senderAddr->addr) + 1);
+		// TODO: parse gossip message
 	}
-	else if (msgHeader->msgType == JOINREQ)
+	else
 	{
-		// Received a JOINREQ so need to send a JOINREP as the response.
-		JoinMessage joinMsg = JoinMessage(
-			&memberNode->addr, JOINREP, &memberNode->heartbeat);
-		memberNode->heartbeat++;
+		// Otherwise, it's a join message (request or reply) and the payload is only
+		// one long representing the sender's heartbeat.
+		long *senderHeartbeat = (long *)(
+			data + sizeof(MessageHdr) + sizeof(senderAddr->addr) + 1);
 
-		emulNet->ENsend(&(memberNode->addr), senderAddr,
-		                joinMsg.getMessage(), joinMsg.getMessageSize());
-		logEvent(
-			"Sending reply message for join request to %d.%d.%d.%d:%d", senderAddr);
+	  if (msgHeader->msgType == JOINREP)
+	  {
+		  // We received a reply to our join request, so we are now in the group.
+		  memberNode->inGroup = true;
+		  logEvent(
+				"Received reply from %d.%d.%d.%d:%d for join request", senderAddr);
 
-		addMembershipEntry(senderAddr, *senderHeartbeat);
+		  addMembershipEntry(senderAddr, *senderHeartbeat);
+
+	  }
+	  else if (msgHeader->msgType == JOINREQ)
+	  {
+		  // Received a JOINREQ so need to send a JOINREP as the response.
+		  JoinMessage joinMsg = JoinMessage(
+			  &memberNode->addr, JOINREP, &memberNode->heartbeat);
+		  memberNode->heartbeat++;
+
+		  emulNet->ENsend(&(memberNode->addr), senderAddr,
+		                  joinMsg.getMessage(), joinMsg.getMessageSize());
+		  logEvent(
+			  "Sending reply message for join request to %d.%d.%d.%d:%d", senderAddr);
+
+		  addMembershipEntry(senderAddr, *senderHeartbeat);
+	  }
 	}
-	// TODO: handle gossip message
 	return true;
 }
 
@@ -462,6 +478,9 @@ void MP1Node::addMembershipEntry(Address* newAddr, long newHeartbeat)
 	short port = addressHandler->portFromAddress(newAddr);
 	MemberListEntry mle = MemberListEntry(
 		id, port, newHeartbeat, par->getcurrtime());
+
+	std::string newAddrStr(newAddr->addr);
+	memTableIdx[newAddrStr] = memberNode->memberList.size();
 	memberNode->memberList.push_back(mle);
 	log->logNodeAdd(&memberNode->addr, newAddr);
   memberNode->nnb++;
@@ -508,17 +527,23 @@ void MP1Node::cleanMemberList() {
 	std::vector<MemberListEntry> cleanedMemberList;
 	for (int mleIdx = 0; mleIdx < memberNode->memberList.size(); mleIdx++) {
 		MemberListEntry *mle = &memberNode->memberList[mleIdx];
+
+		Address entryAddr;
+		addressHandler->addressFromIdAndPort(
+			&entryAddr, mle->getid(), mle->getport());
+		std::string entryAddrStr(entryAddr.addr);
+
 		if (par->getcurrtime() - mle->gettimestamp() < TCLEANUP) {
+			memTableIdx[entryAddrStr] = cleanedMemberList.size();
 			cleanedMemberList.push_back(*mle);
 		}
 		else {
-			Address entryAddr;
-			addressHandler->addressFromIdAndPort(
-				&entryAddr, mle->getid(), mle->getport());
 			log->logNodeRemove(&memberNode->addr, &entryAddr);
+			memTableIdx.erase(entryAddrStr);
 			memberNode->nnb--;
 		}
 	}
+
 	memberNode->memberList = cleanedMemberList;
 }
 

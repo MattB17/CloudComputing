@@ -14,6 +14,7 @@
 #include "Member.h"
 #include "EmulNet.h"
 #include "Queue.h"
+#include <unordered_map>
 
 /**
  * Macros
@@ -116,6 +117,7 @@ private:
 	char NULLADDR[6];
   AddressHandler *addressHandler;
   double gossipProp;
+  std::unordered_map<std::string, size_t> memTableIdx;
 
   void logEvent(const char* eventMsg, Address* addr);
   void logMsg(const char* msg);
