@@ -125,6 +125,10 @@ private:
   std::vector<MemberListEntry> getActiveNodes();
   void sendGossip(std::vector<MemberListEntry>& activeNodes,
                   GossipMessage& gossipMsg);
+  void handleGossipMessage(char* gossipData,
+                           long numGossipEntries,
+                           Address* senderAddr);
+  void addMembershipEntry(Address* newAddr, long newHeartbeat);
 
 public:
 	MP1Node(Member *, Params *, EmulNet *, Log *, Address *);
@@ -145,7 +149,6 @@ public:
 	Address getJoinAddress();
 	void initMemberListTable(Member *memberNode);
 	void printAddress(Address *addr);
-  void addMembershipEntry(Address *memberAddr, long memberHeartbeat);
 	virtual ~MP1Node();
 };
 

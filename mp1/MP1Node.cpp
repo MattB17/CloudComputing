@@ -79,13 +79,13 @@ GossipMessage::GossipMessage(Address* fromAddr,
 		(char *)(msg + 1) + sizeof(fromAddr->addr) + 1, &numEntries, sizeof(long));
 
 	// Now fill in all the member entries.
-	size_t offset =sizeof(fromAddr->addr) + 1 + sizeof(long);
+	size_t offset = sizeof(fromAddr->addr) + 1 + sizeof(long);
 	for (auto itr = memTable.begin(); itr != memTable.end(); itr++) {
 		int id = itr->getid();
 		short port = itr->getport();
 		long heartbeat = itr->getheartbeat();
-		memcpy((char *)(msg+1) + offset, &id, sizeof(long));
-		offset += sizeof(long);
+		memcpy((char *)(msg+1) + offset, &id, sizeof(int));
+		offset += sizeof(int);
 		memcpy((char *)(msg+1) + offset, &port, sizeof(short));
 		offset += sizeof(short);
 		memcpy((char *)(msg+1) + offset, &heartbeat, sizeof(long));
@@ -348,15 +348,17 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
 	{
 		// If it's a gossip message then the next long is the size of the
 		// sender's member table.
-		long *memTableSize = (long *)(
+		long memTableSize = *(long *)(
 			data + sizeof(MessageHdr) + sizeof(senderAddr->addr) + 1);
-		// TODO: parse gossip message
+		logEvent("Received gossip message from %d.%d.%d.%d:%d", senderAddr);
+
+		handleGossipMessage(data, memTableSize, senderAddr);
 	}
 	else
 	{
 		// Otherwise, it's a join message (request or reply) and the payload is only
 		// one long representing the sender's heartbeat.
-		long *senderHeartbeat = (long *)(
+		long senderHeartbeat = *(long *)(
 			data + sizeof(MessageHdr) + sizeof(senderAddr->addr) + 1);
 
 	  if (msgHeader->msgType == JOINREP)
@@ -366,7 +368,7 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
 		  logEvent(
 				"Received reply from %d.%d.%d.%d:%d for join request", senderAddr);
 
-		  addMembershipEntry(senderAddr, *senderHeartbeat);
+		  addMembershipEntry(senderAddr, senderHeartbeat);
 
 	  }
 	  else if (msgHeader->msgType == JOINREQ)
@@ -381,7 +383,7 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
 		  logEvent(
 			  "Sending reply message for join request to %d.%d.%d.%d:%d", senderAddr);
 
-		  addMembershipEntry(senderAddr, *senderHeartbeat);
+		  addMembershipEntry(senderAddr, senderHeartbeat);
 	  }
 	}
 	return true;
@@ -592,5 +594,42 @@ void MP1Node::sendGossip(std::vector<MemberListEntry>& activeNodes,
 		emulNet->ENsend(&memberNode->addr, &destAddr,
 										msg, gossipMsg.getMessageSize());
 		logEvent("Sending gossip message to %d.%d.%d.%d:%d", &destAddr);
+	}
+}
+
+void MP1Node::handleGossipMessage(char* gossipData,
+	                                long numGossipEntries,
+																	Address* senderAddr)
+{
+	size_t offset = (
+		sizeof(MessageHdr) + sizeof(senderAddr->addr) + 1 + sizeof(long));
+	for (int i = 0; i < numGossipEntries; i++) {
+		// Parse data for this gossip entry.
+		int currId = *(int *)(gossipData + offset);
+		offset += sizeof(int);
+		short currPort = *(short *)(gossipData + offset);
+		offset += sizeof(short);
+		long currHeartbeat = *(long *)(gossipData + offset);
+		offset += sizeof(long);
+
+		Address currAddress;
+		addressHandler->addressFromIdAndPort(&currAddress, currId, currPort);
+		std::string currAddressStr(currAddress.addr);
+		auto currAddrIdx = memTableIdx.find(currAddressStr);
+		if (currAddrIdx == memTableIdx.end())
+		{
+			addMembershipEntry(&currAddress, currHeartbeat);
+		}
+		else
+		{
+			MemberListEntry* currMle = &memberNode->memberList[currAddrIdx->second];
+			if (par->getcurrtime() - currMle->gettimestamp() <= TFAIL &&
+			    currHeartbeat > currMle->getheartbeat())
+			{
+				logEvent("Updating heartbeat for %d.%d.%d.%d:%d", &currAddress);
+				currMle->setheartbeat(currHeartbeat);
+				currMle->settimestamp(par->getcurrtime());
+			}
+		}
 	}
 }
