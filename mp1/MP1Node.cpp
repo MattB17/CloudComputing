@@ -29,7 +29,7 @@ JoinMessage::JoinMessage(Address* fromAddr,
 	msg->msgType = joinType;
 	memcpy((char *)(msg + 1), &fromAddr->addr, sizeof(fromAddr->addr));
 	memcpy(
-		(char *)(msg + 1) + 1 + sizeof(fromAddr->addr), &heartbeat, sizeof(long));
+		(char *)(msg + 1) + 1 + sizeof(fromAddr->addr), heartbeat, sizeof(long));
 }
 
 /**
@@ -162,6 +162,7 @@ MP1Node::MP1Node(Member *member, Params *params, EmulNet *emul, Log *log, Addres
 	this->memberNode->addr = *address;
 	this->addressHandler = new AddressHandler();
 	this->gossipProp = 0.5;
+	this->addrStr = std::string(address->addr);
 }
 
 /**
@@ -256,7 +257,6 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
   else {
 		JoinMessage joinMsg = JoinMessage(
 			&memberNode->addr, JOINREQ, &memberNode->heartbeat);
-		memberNode->heartbeat++;
 		logMsg("Trying to join...");
 
     // send JOINREQ message to introducer member
@@ -336,10 +336,6 @@ void MP1Node::checkMessages() {
  * DESCRIPTION: Message handler for different message types
  */
 bool MP1Node::recvCallBack(void *env, char *data, int size ) {
-	#ifdef DEBUGLOG
-	    static char logMsg[1024];
-	#endif
-
   // Extract the message header and the address of the sender.
 	MessageHdr *msgHeader = (MessageHdr *)(data);
 	Address *senderAddr = (Address *)(data + sizeof(MessageHdr));
@@ -374,9 +370,9 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
 	  else if (msgHeader->msgType == JOINREQ)
 	  {
 		  // Received a JOINREQ so need to send a JOINREP as the response.
+			incrementHeartbeat();
 		  JoinMessage joinMsg = JoinMessage(
 			  &memberNode->addr, JOINREP, &memberNode->heartbeat);
-		  memberNode->heartbeat++;
 
 		  emulNet->ENsend(&(memberNode->addr), senderAddr,
 		                  joinMsg.getMessage(), joinMsg.getMessageSize());
@@ -410,8 +406,8 @@ void MP1Node::nodeLoopOps() {
 	{
 		// Time to gossip again.
 		// Start by updating your own heartbeat.
-		memberNode->myPos->setheartbeat(memberNode->heartbeat);
-		memberNode->heartbeat++;
+		incrementHeartbeat();
+		printMemberTable();
 
 		// We want to send only the active nodes.
 		std::vector<MemberListEntry> activeNodes = getActiveNodes();
@@ -460,7 +456,6 @@ void MP1Node::initMemberListTable(Member *memberNode) {
 	memberNode->memberList.clear();
 	// Add self to the table
 	addMembershipEntry(&memberNode->addr, memberNode->heartbeat);
-	memberNode->myPos = memberNode->memberList.begin();
 }
 
 /**
@@ -535,11 +530,14 @@ void MP1Node::cleanMemberList() {
 			&entryAddr, mle->getid(), mle->getport());
 		std::string entryAddrStr(entryAddr.addr);
 
-		if (par->getcurrtime() - mle->gettimestamp() < TCLEANUP) {
+		if (par->getcurrtime() - mle->gettimestamp() <= TCLEANUP ||
+	      entryAddr == memberNode->addr)
+		{
 			memTableIdx[entryAddrStr] = cleanedMemberList.size();
 			cleanedMemberList.push_back(*mle);
 		}
-		else {
+		else
+		{
 			log->logNodeRemove(&memberNode->addr, &entryAddr);
 			memTableIdx.erase(entryAddrStr);
 			memberNode->nnb--;
@@ -614,6 +612,12 @@ void MP1Node::handleGossipMessage(char* gossipData,
 
 		Address currAddress;
 		addressHandler->addressFromIdAndPort(&currAddress, currId, currPort);
+		if (currAddress == memberNode->addr) {
+			continue;
+		}
+
+    logEvent("Handling member table entry for %d.%d.%d.%d:%d", &currAddress);
+
 		std::string currAddressStr(currAddress.addr);
 		auto currAddrIdx = memTableIdx.find(currAddressStr);
 		if (currAddrIdx == memTableIdx.end())
@@ -632,4 +636,42 @@ void MP1Node::handleGossipMessage(char* gossipData,
 			}
 		}
 	}
+	printMemberTable();
+}
+
+void MP1Node::printMemberTable()
+{
+	logMsg("Printing member list table:");
+	for (int i = 0; i < memberNode->memberList.size(); i++) {
+		MemberListEntry* mle = &memberNode->memberList[i];
+		Address mleAddress;
+		addressHandler->addressFromIdAndPort(
+			&mleAddress, mle->getid(), mle->getport());
+		#ifdef DEBUGLOG
+		  static char logMsg[1024];
+			sprintf(
+				logMsg,
+				"Entry for %d.%d.%d.%d:%d with heartbeat %ld, last updated at %ld",
+				mleAddress.addr[0],
+				mleAddress.addr[1],
+				mleAddress.addr[2],
+				mleAddress.addr[3],
+				addressHandler->portFromAddress(&mleAddress),
+			  mle->getheartbeat(),
+			  mle->gettimestamp());
+			log->LOG(&memberNode->addr, logMsg);
+		#endif
+	}
+}
+
+void MP1Node::incrementHeartbeat()
+{
+	memberNode->heartbeat++;
+	auto itr = memTableIdx.find(addrStr);
+	if (itr == memTableIdx.end()) {
+		logMsg("Something has gone wrong, cannot find self!");
+		exit(1);
+	}
+	memberNode->memberList[itr->second].setheartbeat(memberNode->heartbeat);
+	memberNode->memberList[itr->second].settimestamp(par->getcurrtime());
 }

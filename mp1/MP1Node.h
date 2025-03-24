@@ -20,8 +20,8 @@
  * Macros
  */
 #define TCLEANUP 20
-#define TFAIL 5
-#define TGOSSIP 2
+#define TFAIL 10
+#define TGOSSIP 1
 
 /*
  * Note: You can change/add any functions in MP1Node.{h,cpp}
@@ -118,6 +118,7 @@ private:
   AddressHandler *addressHandler;
   double gossipProp;
   std::unordered_map<std::string, size_t> memTableIdx;
+  std::string addrStr;
 
   void logEvent(const char* eventMsg, Address* addr);
   void logMsg(const char* msg);
@@ -129,6 +130,8 @@ private:
                            long numGossipEntries,
                            Address* senderAddr);
   void addMembershipEntry(Address* newAddr, long newHeartbeat);
+  void printMemberTable();
+  void incrementHeartbeat();
 
 public:
 	MP1Node(Member *, Params *, EmulNet *, Log *, Address *);
