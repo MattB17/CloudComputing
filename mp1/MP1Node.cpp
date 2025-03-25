@@ -471,12 +471,17 @@ void MP1Node::printAddress(Address *addr)
 
 void MP1Node::addMembershipEntry(Address* newAddr, long newHeartbeat)
 {
+	std::string newAddrStr(newAddr->addr);
+	auto mleItr = memTableIdx.find(newAddrStr);
+	if (mleItr != memTableIdx.end()) {
+		return;
+	}
+
 	int id = addressHandler->idFromAddress(newAddr);
 	short port = addressHandler->portFromAddress(newAddr);
 	MemberListEntry mle = MemberListEntry(
 		id, port, newHeartbeat, par->getcurrtime());
 
-	std::string newAddrStr(newAddr->addr);
 	memTableIdx[newAddrStr] = memberNode->memberList.size();
 	memberNode->memberList.push_back(mle);
 	log->logNodeAdd(&memberNode->addr, newAddr);
@@ -612,6 +617,7 @@ void MP1Node::handleGossipMessage(char* gossipData,
 
 		Address currAddress;
 		addressHandler->addressFromIdAndPort(&currAddress, currId, currPort);
+		logEvent("Received gossip message from %d.%d.%d.%d:%d", &currAddress);
 		if (currAddress == memberNode->addr) {
 			continue;
 		}
@@ -630,12 +636,12 @@ void MP1Node::handleGossipMessage(char* gossipData,
 			  currAddress == *senderAddr);
 			if (isActive && currHeartbeat > currMle->getheartbeat())
 			{
+				logEvent("Updating heartbeat for %d.%d.%d.%d:%d", &currAddress);
 				memberNode->memberList[currAddrIdx->second] = MemberListEntry(
 					currId, currPort, currHeartbeat, par->getcurrtime());
 			}
 		}
 	}
-	printMemberTable();
 }
 
 void MP1Node::printMemberTable()
