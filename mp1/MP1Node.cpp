@@ -68,7 +68,7 @@ GossipMessage::GossipMessage(Address* fromAddr,
 	// For each active entry in the membership table we will send its id, port,
 	// and heartbeat (we don't need to send the timestamp as that is local time
   // and won't be used by the receiving process)
-	msgSize += (numEntries * (sizeof(long) + sizeof(short) + sizeof(long)));
+	msgSize += (numEntries * (sizeof(int) + sizeof(short) + sizeof(long)));
 
   // Allocate space for the message and set the message type, from address,
 	// and size of membership table.
@@ -393,21 +393,12 @@ bool MP1Node::recvCallBack(void *env, char *data, int size ) {
  * 				      Propagate your membership list
  */
 void MP1Node::nodeLoopOps() {
-	// Remove any nodes that have not been updated in the last TCLEANUP
-	// time steps.
-	cleanMemberList();
-
 	// Propagate the membership list if it's time to gossip again.
-	if (memberNode->pingCounter > 0)
-	{
-		memberNode->pingCounter--;
-	}
-  else
+	if (memberNode->pingCounter == 0)
 	{
 		// Time to gossip again.
 		// Start by updating your own heartbeat.
 		incrementHeartbeat();
-		printMemberTable();
 
 		// We want to send only the active nodes.
 		std::vector<MemberListEntry> activeNodes = getActiveNodes();
@@ -418,9 +409,18 @@ void MP1Node::nodeLoopOps() {
 		// Send to a random subset of active neighbours
 		sendGossip(activeNodes, gossipMsg);
 
-    // Reset the ping counter.
+		// Reset the ping counter.
 		memberNode->pingCounter = TGOSSIP;
 	}
+  else
+	{
+		memberNode->pingCounter--;
+	}
+
+	// Remove any nodes that have not been updated in the last TCLEANUP
+	// time steps.
+	cleanMemberList();
+
 	return;
 }
 
@@ -559,7 +559,7 @@ std::vector<MemberListEntry> MP1Node::getActiveNodes() {
 			 itr != memberNode->memberList.end();
 			 itr++)
 	{
-		if (par->getcurrtime() - itr->gettimestamp() <= TFAIL) {
+		if ((par->getcurrtime() - itr->gettimestamp()) <= TFAIL) {
 			activeNodes.push_back(*itr);
 		}
 	}
@@ -616,8 +616,6 @@ void MP1Node::handleGossipMessage(char* gossipData,
 			continue;
 		}
 
-    logEvent("Handling member table entry for %d.%d.%d.%d:%d", &currAddress);
-
 		std::string currAddressStr(currAddress.addr);
 		auto currAddrIdx = memTableIdx.find(currAddressStr);
 		if (currAddrIdx == memTableIdx.end())
@@ -627,12 +625,13 @@ void MP1Node::handleGossipMessage(char* gossipData,
 		else
 		{
 			MemberListEntry* currMle = &memberNode->memberList[currAddrIdx->second];
-			if (par->getcurrtime() - currMle->gettimestamp() <= TFAIL &&
-			    currHeartbeat > currMle->getheartbeat())
+			bool isActive = (
+				(par->getcurrtime() - currMle->gettimestamp()) <= TFAIL ||
+			  currAddress == *senderAddr);
+			if (isActive && currHeartbeat > currMle->getheartbeat())
 			{
-				logEvent("Updating heartbeat for %d.%d.%d.%d:%d", &currAddress);
-				currMle->setheartbeat(currHeartbeat);
-				currMle->settimestamp(par->getcurrtime());
+				memberNode->memberList[currAddrIdx->second] = MemberListEntry(
+					currId, currPort, currHeartbeat, par->getcurrtime());
 			}
 		}
 	}
