@@ -23,10 +23,10 @@ public:
 	string value;
 	Address fromAddr;
 	int transID;
-	bool success; // success or not 
+	bool success; // success or not
 	// delimiter
 	string delimiter;
-	// construct a message from a string
+	// construct a message from a string (basically deserialize)
 	Message(string message);
 	Message(const Message& anotherMessage);
 	// construct a create or update message

@@ -15,6 +15,8 @@ HashTable::~HashTable() {}
  *
  * DESCRIPTION: This function inserts they (key,value) pair into the local hash table
  *
+ * It creates the key if it does not exist or overwrites it if it does.
+ *
  * RETURNS:
  * true on SUCCESS
  * false in FAILURE
@@ -31,7 +33,7 @@ bool HashTable::create(string key, string value) {
  *
  * RETURNS:
  * string value if found
- * else it returns a NULL
+ * else it returns an empty string
  */
 string HashTable::read(string key) {
 	map<string, string>::iterator search;
@@ -53,9 +55,10 @@ string HashTable::read(string key) {
  * DESCRIPTION: This function updates the given key with the updated value passed in
  * 				if the key is found
  *
+ *
  * RETURNS:
- * true on SUCCESS
- * false on FAILURE
+ * true on SUCCESS (when the key exists and is updated)
+ * false on FAILURE (if the key doesn't exist)
  */
 bool HashTable::update(string key, string newValue) {
 	map<string, string>::iterator update;
@@ -77,8 +80,8 @@ bool HashTable::update(string key, string newValue) {
  * DESCRIPTION: This function deletes the given key and the corresponding value if the key is found
  *
  * RETURNS:
- * true on SUCCESS
- * false on FAILURE
+ * true on SUCCESS (if key is found and deleted)
+ * false on FAILURE (if key is not found or fail to delete)
  */
 bool HashTable::deleteKey(string key) {
 	uint eraseCount = 0;
@@ -141,4 +144,3 @@ void HashTable::clear() {
 unsigned long HashTable::count(string key) {
 	return (unsigned long) hashTable.count(key);
 }
-

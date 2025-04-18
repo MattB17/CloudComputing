@@ -6,4 +6,4 @@ It teaches low-level distributed computing concepts and high-level cloud archite
 
 The projects are written in C++ and are found in the individual folders (each with their own README):
 * `mp1` (building a membership protocol)
-* `mp2` (building a distributed key-value store) is current **IN PROGRESS** 
+* `mp2` (building a distributed key-value store) is currently **IN PROGRESS** 

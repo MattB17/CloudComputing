@@ -47,16 +47,15 @@ void MP2Node::updateRing() {
 	curMemList = getMembershipList();
 
 	/*
-	 * Step 2: Construct the ring
+	 * Step 2: Construct the ring: Sort the list based on the hashCode
 	 */
-	// Sort the list based on the hashCode
 	sort(curMemList.begin(), curMemList.end());
 
 
 	/*
 	 * Step 3: Run the stabilization protocol IF REQUIRED
 	 */
-	// Run stabilization protocol if the hash table size is greater than zero and if there has been a changed in the ring
+	// Run stabilization protocol if the hash table size is greater than zero and if there has been a change in the ring
 }
 
 /**

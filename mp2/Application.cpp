@@ -52,7 +52,9 @@ Application::Application(char *infile) {
 	log = new Log(par);
 	en = new EmulNet(par);
 	en1 = new EmulNet(par);
+	// An array of MP1Nodes with EN_GPSZ elements
 	mp1 = (MP1Node **) malloc(par->EN_GPSZ * sizeof(MP1Node *));
+	// An array of MP2Nodes with EN_GPSZ elements
 	mp2 = (MP2Node **) malloc(par->EN_GPSZ * sizeof(MP2Node *));
 
 	/*
@@ -112,6 +114,7 @@ int Application::run()
 			timeWhenAllNodesHaveJoined = par->getcurrtime();
 			allNodesJoined = true;
 		}
+		// We wait for a certain buffer period to allow all nodes to join.
 		if ( par->getcurrtime() > timeWhenAllNodesHaveJoined + 50 ) {
 			// Call the KV store functionalities
 			mp2Run();

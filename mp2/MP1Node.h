@@ -14,12 +14,14 @@
 #include "Member.h"
 #include "EmulNet.h"
 #include "Queue.h"
+#include <unordered_map>
 
 /**
  * Macros
  */
-#define TREMOVE 20
-#define TFAIL 5
+#define TCLEANUP 20
+#define TFAIL 10
+#define TGOSSIP 1
 
 /*
  * Note: You can change/add any functions in MP1Node.{h,cpp}
@@ -29,9 +31,13 @@
  * Message Types
  */
 enum MsgTypes{
+    // Join request
     JOINREQ,
+    // Join reply
     JOINREP,
-    DUMMYLASTMSGTYPE
+    // Gossip message
+    GOSSIP,
+    UNKNOWN
 };
 
 /**
@@ -42,6 +48,60 @@ enum MsgTypes{
 typedef struct MessageHdr {
 	enum MsgTypes msgType;
 }MessageHdr;
+
+/**
+ * CLASS NAME: JoinMessage
+ *
+ * DESCRIPTION: Used to build join (JOINREP or JOINREQ) messages.
+ */
+class JoinMessage {
+private:
+  size_t msgSize;
+  MessageHdr *msg;
+
+public:
+  JoinMessage(Address* fromAddr, MsgTypes&& joinType, long* heartbeat);
+  ~JoinMessage();
+  char* getMessage();
+  size_t getMessageSize() {
+    return msgSize;
+  }
+};
+
+/**
+ * CLASS NAME: GossipMessage
+ *
+ * DESCRIPTION: Used to build a gossip message that encapsulates the
+ *              membership table.
+ */
+class GossipMessage {
+private:
+  size_t msgSize;
+  MessageHdr *msg;
+
+public:
+  GossipMessage(Address* fromAddr, std::vector<MemberListEntry>& memTable);
+  ~GossipMessage();
+  char* getMessage();
+  size_t getMessageSize() {
+    return msgSize;
+  }
+};
+
+/**
+ * CLASS NAME: AddressHandler
+ *
+ * DESCRIPTION: Handles address low level operations.
+ *              Used primarily for mapping from an address to id and port and
+ *              vice versa.
+ */
+class AddressHandler {
+public:
+  AddressHandler() {}
+  void addressFromIdAndPort(Address* addr, int id, short port);
+  int idFromAddress(Address* addr);
+  short portFromAddress(Address* addr);
+};
 
 /**
  * CLASS NAME: MP1Node
@@ -55,6 +115,23 @@ private:
 	Params *par;
 	Member *memberNode;
 	char NULLADDR[6];
+  AddressHandler *addressHandler;
+  double gossipProp;
+  std::unordered_map<std::string, size_t> memTableIdx;
+  std::string addrStr;
+
+  void logEvent(const char* eventMsg, Address* addr);
+  void logMsg(const char* msg);
+  void cleanMemberList();
+  std::vector<MemberListEntry> getActiveNodes();
+  void sendGossip(std::vector<MemberListEntry>& activeNodes,
+                  GossipMessage& gossipMsg);
+  void handleGossipMessage(char* gossipData,
+                           long numGossipEntries,
+                           Address* senderAddr);
+  void addMembershipEntry(Address* newAddr, long newHeartbeat);
+  void printMemberTable();
+  void incrementHeartbeat();
 
 public:
 	MP1Node(Member *, Params *, EmulNet *, Log *, Address *);

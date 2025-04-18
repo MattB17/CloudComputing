@@ -11,6 +11,9 @@
  * CLASS NAME: Entry
  *
  * DESCRIPTION: This class describes the entry for each key in the DHT
+ *
+ * `delimiter` is used to convert the entry to a string or parse an entry from
+ * a string.
  */
 class Entry{
 public:
