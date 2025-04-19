@@ -10,7 +10,7 @@
 /*
  * Macros
  */
-#define RING_SIZE 512
+#define RING_SIZE 512  // 2^9
 #define FAILURE -1
 #define SUCCESS 0
 
@@ -41,5 +41,5 @@ using namespace std;
 #define STDCLLBKARGS (void *env, char *data, int size)
 #define STDCLLBKRET	void
 #define DEBUGLOG 1
-		
+
 #endif	/* _STDINCLUDES_H_ */

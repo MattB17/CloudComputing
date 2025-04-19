@@ -52,6 +52,9 @@ Node& Node::operator=(const Node& another) {
 
 /**
  * operator overloading
+ *
+ * we order nodes by their hashcode: which is the hash of their address
+ * modulo the ring size (ie. their position on the ring).
  */
 bool Node::operator < (const Node& another) const {
 	return this->nodeHashCode < another.nodeHashCode;

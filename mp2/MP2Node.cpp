@@ -29,8 +29,9 @@ MP2Node::~MP2Node() {
  * FUNCTION NAME: updateRing
  *
  * DESCRIPTION: This function does the following:
- * 				1) Gets the current membership list from the Membership Protocol (MP1Node)
- * 				   The membership list is returned as a vector of Nodes. See Node class in Node.h
+ * 				1) Gets the current membership list from the Membership Protocol
+ *           (MP1Node). The membership list is returned as a vector of Nodes.
+ *           See Node class in Node.h
  * 				2) Constructs the ring based on the membership list
  * 				3) Calls the Stabilization Protocol
  */
@@ -38,24 +39,57 @@ void MP2Node::updateRing() {
 	/*
 	 * Implement this. Parts of it are already implemented
 	 */
-	vector<Node> curMemList;
+	vector<Node> currMemList;
+	// Indicates whether the ring has changed
 	bool change = false;
 
 	/*
 	 *  Step 1. Get the current membership list from Membership Protocol / MP1
+	 *
+	 * Note this membership list will consist on nodes and their addresses.
 	 */
-	curMemList = getMembershipList();
+	currMemList = getMembershipList();
 
 	/*
 	 * Step 2: Construct the ring: Sort the list based on the hashCode
+	 *
+	 * As nodes are sorted by the hash code of their address this puts the nodes
+	 * in their clockwise order around the ring.
 	 */
-	sort(curMemList.begin(), curMemList.end());
+	sort(currMemList.begin(), currMemList.end());
+
+	// Now need to determine if the ring has changed.
+	if (currMemList.size() != this->ring.size())
+	{
+		// Clearly if the membership list has a different size then it has.
+		change = true;
+	}
+	else
+	{
+		// Otherwise, we iterate through until either we find a node that differs
+		// or all nodes match.
+		for (size_t ringIdx = 0; ringIdx < currMemList.size(); ringIdx++) {
+			if (currMemList[ringIdx].nodeHashCode != this->ring[ringIdx].nodeHashCode)
+			{
+				change = true;
+				break;
+			}
+		}
+	}
+
+	// Then assign the current membership list to the ring
+	this->ring = currMemList;
 
 
 	/*
 	 * Step 3: Run the stabilization protocol IF REQUIRED
 	 */
-	// Run stabilization protocol if the hash table size is greater than zero and if there has been a change in the ring
+	// Run stabilization protocol if the hash table size is greater than zero and
+	// if there has been a change in the ring
+	if (change && !this->ht->isEmpty())
+	{
+		this->stabilizationProtocol();
+	}
 }
 
 /**
