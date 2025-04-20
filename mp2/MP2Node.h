@@ -19,6 +19,37 @@
 #include "Message.h"
 #include "Queue.h"
 
+// Transaction types
+enum TransactionType {T_CREATE, T_READ, T_UPDATE, T_DELETE};
+
+/*
+ * CLASS NAME: TransactionState
+ *
+ * Used to handle the state of pending transactions.
+ */
+class TransactionState {
+private:
+	string key;
+	string value;
+	TransactionType type;
+	short successCount;
+	short failureCount;
+
+public:
+	// For create or update transactions
+	TransactionState(string k, string v, TransactionType t);
+
+  // For delete transactions
+	TransactionState(string k);
+
+	TransactionType getTransactionType() { return type; }
+	void recordSuccess() { successCount++; }
+	void recordFailure() { failureCount++; }
+
+	bool hasTransactionSucceeded() { return successCount == 2; }
+	bool hasTransactionFailed() { return failureCount == 2; }
+};
+
 /**
  * CLASS NAME: MP2Node
  *
@@ -47,6 +78,8 @@ private:
 	EmulNet * emulNet;
 	// Object of Log
 	Log * log;
+
+	std::unordered_map<int, TransactionState> incompleteTxns;
 
 	void handleCreateMessage(Message& msg);
 

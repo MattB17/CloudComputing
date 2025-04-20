@@ -6,6 +6,23 @@
 #include "MP2Node.h"
 
 /**
+ * CONSTRUCTOR
+ *
+ * Used in the case the transaction is a create or update
+ */
+TransactionState::TransactionState(string k, string v, TransactionType t)
+  : key(k), value(v), type(t), successCount(0), failureCount(0) {}
+
+	/**
+	 * CONSTRUCTOR
+	 *
+	 * Used in the case the transaction is a delete
+	 */
+TransactionState::TransactionState(string k)
+  : key(k), value(""), type(TransactionType::T_DELETE),
+	  successCount(0), failureCount(0) {}
+
+/**
  * constructor
  */
 MP2Node::MP2Node(Member *memberNode, Params *par, EmulNet * emulNet, Log * log, Address * address) {
@@ -162,6 +179,9 @@ void MP2Node::clientCreate(string key, string value) {
 			&(replicas[rIdx].nodeAddress),
 			rMsg.toString());
 	}
+
+	incompleteTxns.insert(
+		{transId, TransactionState(key, value, TransactionType::T_CREATE)});
 }
 
 /**
