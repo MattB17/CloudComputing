@@ -141,9 +141,27 @@ size_t MP2Node::hashFunction(string key) {
  * 				3) Sends a message to the replica
  */
 void MP2Node::clientCreate(string key, string value) {
-	/*
-	 * Implement this
-	 */
+	std::vector<Node> replicas = findNodes(key);
+	std::vector<ReplicaType> replicaTypes = {
+		ReplicaType::PRIMARY, ReplicaType::SECONDARY, ReplicaType::TERTIARY};
+
+	int transId = g_transID;
+	g_transID++;
+
+
+	for (int rIdx = 0; rIdx < 3; rIdx++) {
+		Message rMsg = Message(
+			transId,
+			this->memberNode->addr,
+		  MessageType::CREATE,
+		  key,
+		  value,
+		  replicaTypes[rIdx]);
+		this->emulNet->ENsend(
+			&(this->memberNode->addr),
+			&(replicas[rIdx].nodeAddress),
+			rMsg.toString());
+	}
 }
 
 /**
@@ -200,10 +218,7 @@ void MP2Node::clientDelete(string key){
  * 			   	2) Return true or false based on success or failure
  */
 bool MP2Node::createKeyValue(string key, string value, ReplicaType replica) {
-	/*
-	 * Implement this
-	 */
-	// Insert key, value, replicaType into the hash table
+	return this->ht->create(key, value);
 }
 
 /**
@@ -260,9 +275,6 @@ bool MP2Node::deletekey(string key) {
  * 				2) Handles the messages according to message types
  */
 void MP2Node::checkMessages() {
-	/*
-	 * Implement this. Parts of it are already implemented
-	 */
 	char * data;
 	int size;
 
@@ -280,11 +292,16 @@ void MP2Node::checkMessages() {
 		memberNode->mp2q.pop();
 
 		string message(data, data + size);
+		Message msg = Message(message);
 
-		/*
-		 * Handle the message types here
-		 */
-
+		switch (msg.type)
+		{
+			case MessageType::CREATE:
+			  handleCreateMessage(msg);
+				break;
+			default:
+			  break;
+		}
 	}
 
 	/*
@@ -303,8 +320,9 @@ vector<Node> MP2Node::findNodes(string key) {
 	size_t pos = hashFunction(key);
 	vector<Node> addr_vec;
 	if (ring.size() >= 3) {
-		// if pos <= min || pos > max, the leader is the min
-		if (pos <= ring.at(0).getHashCode() || pos > ring.at(ring.size()-1).getHashCode()) {
+		// if pos <= min || pos > max, the leader (primary replica) is the min
+		if (pos <= ring.at(0).getHashCode() ||
+		    pos > ring.at(ring.size()-1).getHashCode()) {
 			addr_vec.emplace_back(ring.at(0));
 			addr_vec.emplace_back(ring.at(1));
 			addr_vec.emplace_back(ring.at(2));
@@ -335,7 +353,9 @@ bool MP2Node::recvLoop() {
     	return false;
     }
     else {
-    	return emulNet->ENrecv(&(memberNode->addr), this->enqueueWrapper, NULL, 1, &(memberNode->mp2q));
+    	return emulNet->ENrecv(
+				&(memberNode->addr), this->enqueueWrapper,
+				NULL, 1, &(memberNode->mp2q));
     }
 }
 
@@ -361,4 +381,48 @@ void MP2Node::stabilizationProtocol() {
 	/*
 	 * Implement this
 	 */
+}
+
+/**
+ * FUNCTION NAME: handleCreateMessage
+ *
+ * DESCRIPTION: Performs the server-side handling of a create message
+ *              That is, it:
+ *              1) Creates the key-value pair on the server side
+ *              2) Logs whether the creation was successful
+ *              3) Sends a reply back to the client node that initiated the
+ *                 create.
+ */
+void MP2Node::handleCreateMessage(Message& msg)
+{
+	bool created = this->createKeyValue(msg.key, msg.value, msg.replica);
+
+	if (created)
+	{
+		this->log->logCreateSuccess(
+			&(this->memberNode->addr),
+			false,
+			msg.transID,
+			msg.key,
+			msg.value);
+	}
+	else
+	{
+		this->log->logCreateFail(
+			&(this->memberNode->addr),
+			false,
+			msg.transID,
+			msg.key,
+			msg.value);
+	}
+
+	Message replyMsg = Message(
+		msg.transID,
+	  this->memberNode->addr,
+		MessageType::REPLY,
+		created);
+	this->emulNet->ENsend(
+		&(this->memberNode->addr),
+		&(msg.fromAddr),
+		replyMsg.toString());
 }

@@ -48,6 +48,8 @@ private:
 	// Object of Log
 	Log * log;
 
+	void handleCreateMessage(Message& msg);
+
 public:
 	MP2Node(Member *memberNode, Params *par, EmulNet *emulNet, Log *log, Address *addressOfMember);
 	Member * getMemberNode() {
