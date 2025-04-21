@@ -42,12 +42,20 @@ public:
   // For delete transactions
 	TransactionState(string k);
 
+  string getKey() { return key; }
+	string getValue() { return value; }
 	TransactionType getTransactionType() { return type; }
+	
 	void recordSuccess() { successCount++; }
 	void recordFailure() { failureCount++; }
 
+  // Indicates whether the transaction has succeeded.
 	bool hasTransactionSucceeded() { return successCount == 2; }
+	// Indicates whether the transaction has failed.
 	bool hasTransactionFailed() { return failureCount == 2; }
+
+  // Indicates whether all replies for the transaction have been received.
+	bool allRepliesReceived() { return successCount + failureCount == 3; }
 };
 
 /**
@@ -82,6 +90,10 @@ private:
 	std::unordered_map<int, TransactionState> incompleteTxns;
 
 	void handleCreateMessage(Message& msg);
+	void handleReplyMessage(Message& msg);
+
+	void logTransactionSuccess(int transId);
+	void logTransactionFailure(int transId);
 
 public:
 	MP2Node(Member *memberNode, Params *par, EmulNet *emulNet, Log *log, Address *addressOfMember);

@@ -319,6 +319,9 @@ void MP2Node::checkMessages() {
 			case MessageType::CREATE:
 			  handleCreateMessage(msg);
 				break;
+			case MessageType::REPLY:
+			  handleReplyMessage(msg);
+				break;
 			default:
 			  break;
 		}
@@ -445,4 +448,139 @@ void MP2Node::handleCreateMessage(Message& msg)
 		&(this->memberNode->addr),
 		&(msg.fromAddr),
 		replyMsg.toString());
+}
+
+/*
+ * FUNCTION NAME: handleReplyMessage
+ *
+ * DESCRIPTION: Handles receipt of a reply message on the server side.
+ *              That is, it
+ *              1) Checks the reply is for a pending transaction
+ *              2) Updates the success or failure count of that transaction
+ *                 based on the reply message.
+ *              3) If the success/failure count has reached a quorum the
+ *                 success/failure of the transaction is logged
+ *              4) If all replies have been completed for the transaction then
+ *                 the transaction is marked as completed.
+ */
+void MP2Node::handleReplyMessage(Message& msg)
+{
+	auto txnPointer = this->incompleteTxns.find(msg.transID);
+	if (txnPointer == this->incompleteTxns.end())
+	{
+		// This is not a pending transaction, so discard the message.
+		return;
+	}
+
+	if (msg.success)
+	{
+		txnPointer->second.recordSuccess();
+	}
+	else
+	{
+		txnPointer->second.recordFailure();
+	}
+
+	if (txnPointer->second.hasTransactionSucceeded())
+	{
+		logTransactionSuccess(msg.transID);
+	}
+	else if (txnPointer->second.hasTransactionFailed())
+	{
+		logTransactionFailure(msg.transID);
+	}
+
+	if (txnPointer->second.allRepliesReceived())
+	{
+		this->incompleteTxns.erase(msg.transID);
+	}
+}
+
+/*
+ * FUNCTION NAME: logTransactionSuccess
+ *
+ * DESCRIPTION: Logs the successful completion of a transaction from the
+ *              coordinator node.
+ */
+void MP2Node::logTransactionSuccess(int transId)
+{
+	auto txnPointer = this->incompleteTxns.find(transId);
+	if (txnPointer == incompleteTxns.end()) {
+		return;
+	}
+
+	switch (txnPointer->second.getTransactionType())
+	{
+		case TransactionType::T_CREATE:
+		  this->log->logCreateSuccess(
+				&(this->memberNode->addr),
+			  true,
+			  transId,
+			  txnPointer->second.getKey(),
+			  txnPointer->second.getValue());
+			break;
+		case TransactionType::T_UPDATE:
+		  this->log->logUpdateSuccess(
+				&(this->memberNode->addr),
+				true,
+				transId,
+				txnPointer->second.getKey(),
+				txnPointer->second.getValue());
+		  break;
+		case TransactionType::T_DELETE:
+		  this->log->logDeleteSuccess(
+				&(this->memberNode->addr),
+				true,
+				transId,
+				txnPointer->second.getKey());
+			break;
+		default:
+		  this->log->LOG(&(this->memberNode->addr), "Unsupported transaction type");
+			break;
+	}
+}
+
+
+/*
+ * FUNCTION NAME: logTransactionFailure
+ *
+ * DESCRIPTION: Logs the unsuccessful completion of a transaction from the
+ *              coordinator node.
+ */
+void MP2Node::logTransactionFailure(int transId)
+{
+	auto txnPointer = this->incompleteTxns.find(transId);
+	if (txnPointer == incompleteTxns.end()) {
+		return;
+	}
+
+	switch (txnPointer->second.getTransactionType())
+	{
+		case TransactionType::T_CREATE:
+		  this->log->logCreateFail(
+				&(this->memberNode->addr),
+			  true,
+			  transId,
+			  txnPointer->second.getKey(),
+			  txnPointer->second.getValue());
+			break;
+		case TransactionType::T_UPDATE:
+		  this->log->logUpdateFail(
+				&(this->memberNode->addr),
+				true,
+				transId,
+				txnPointer->second.getKey(),
+				txnPointer->second.getValue());
+		  break;
+		case TransactionType::T_DELETE:
+		  this->log->logDeleteFail(
+				&(this->memberNode->addr),
+				true,
+				transId,
+				txnPointer->second.getKey());
+			break;
+		default:
+		  this->log->LOG(&(this->memberNode->addr), "Unsupported transaction type");
+			break;
+	}
 }
