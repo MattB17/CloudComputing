@@ -163,8 +163,7 @@ void MP2Node::clientCreate(string key, string value) {
 		ReplicaType::PRIMARY, ReplicaType::SECONDARY, ReplicaType::TERTIARY};
 
   // Get an ID for the current transaction.
-	int currTransId = g_transID;
-	g_transID++;
+	int currTransId = getTransactionId();
 
 
   // Iterate through the replicas.
@@ -232,8 +231,7 @@ void MP2Node::clientDelete(string key){
 	std::vector<Node> replicas = findNodes(key);
 
   // Get the transaction ID for this transaction.
-	int currTransId = g_transID;
-	g_transID++;
+	int currTransId = getTransactionId();
 
   // Iterate through the replicas.
 	for (int rIdx = 0; rIdx < replicas.size(); rIdx++)
@@ -468,18 +466,7 @@ void MP2Node::handleCreateMessage(Message& msg)
 			msg.value);
 	}
 
-  // Construct the reply message.
-	Message replyMsg = Message(
-		msg.transID,
-	  this->memberNode->addr,
-		MessageType::REPLY,
-		created);
-
-	// Send the reply back to the coordinator.
-	this->emulNet->ENsend(
-		&(this->memberNode->addr),
-		&(msg.fromAddr),
-		replyMsg.toString());
+	this->sendReplyToCoordinator(msg, created);
 }
 
 /**
@@ -514,18 +501,7 @@ void MP2Node::handleDeleteMessage(Message& msg)
 			msg.key);
 	}
 
-	// Construct the reply message.
-	Message replyMsg = Message(
-		msg.transID,
-		this->memberNode->addr,
-		MessageType::REPLY,
-		deleted);
-
-	// Send the reply to the coordinator
-	this->emulNet->ENsend(
-		&(this->memberNode->addr),
-		&(msg.fromAddr),
-		replyMsg.toString());
+	this->sendReplyToCoordinator(msg, deleted);
 }
 
 /*
@@ -661,4 +637,40 @@ void MP2Node::logTransactionFailure(int transId)
 		  this->log->LOG(&(this->memberNode->addr), "Unsupported transaction type");
 			break;
 	}
+}
+
+/*
+ * FUNCTION NAME: getTransactionId
+ *
+ * DESCRIPTION: Retrieves a transaction ID for the transaction.
+ */
+int MP2Node::getTransactionId()
+{
+	int transId = g_transID;
+	g_transID++;
+	return transId;
+}
+
+/*
+ * FUNCTION NAME: sendReplyToCoordinator
+ *
+ * DESCRIPTION: Sends a reply message to the coordinator. `coordMsg` is the
+ *              `Message` from the coordinator that initiated the operation and
+ *              `operationSucceeded` is a boolean representing whether the
+ *              operation succeeded on the node.
+ */
+void MP2Node::sendReplyToCoordinator(Message& coordMsg, bool operationSucceeded)
+{
+	// Construct the reply message.
+	Message replyMsg = Message(
+		coordMsg.transID,
+		this->memberNode->addr,
+		MessageType::REPLY,
+		operationSucceeded);
+
+	// Send the reply to the coordinator
+	this->emulNet->ENsend(
+		&(this->memberNode->addr),
+		&(coordMsg.fromAddr),
+		replyMsg.toString());
 }

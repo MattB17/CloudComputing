@@ -96,6 +96,9 @@ private:
 	void logTransactionSuccess(int transId);
 	void logTransactionFailure(int transId);
 
+	int getTransactionId();
+	void sendReplyToCoordinator(Message& coordMsg, bool operationSucceeded);
+
 public:
 	MP2Node(Member *memberNode, Params *par, EmulNet *emulNet, Log *log, Address *addressOfMember);
 	Member * getMemberNode() {
