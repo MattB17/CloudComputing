@@ -162,26 +162,31 @@ void MP2Node::clientCreate(string key, string value) {
 	std::vector<ReplicaType> replicaTypes = {
 		ReplicaType::PRIMARY, ReplicaType::SECONDARY, ReplicaType::TERTIARY};
 
-	int transId = g_transID;
+  // Get an ID for the current transaction.
+	int currTransId = g_transID;
 	g_transID++;
 
 
+  // Iterate through the replicas.
 	for (int rIdx = 0; rIdx < 3; rIdx++) {
-		Message rMsg = Message(
-			transId,
+		// Construct create message for the replica.
+		Message cMsg = Message(
+			currTransId,
 			this->memberNode->addr,
 		  MessageType::CREATE,
 		  key,
 		  value,
 		  replicaTypes[rIdx]);
+		// Send the create message to the replica.
 		this->emulNet->ENsend(
 			&(this->memberNode->addr),
 			&(replicas[rIdx].nodeAddress),
-			rMsg.toString());
+			cMsg.toString());
 	}
 
+  // Keep a record of the pending transaction.
 	incompleteTxns.insert(
-		{transId, TransactionState(key, value, TransactionType::T_CREATE)});
+		{currTransId, TransactionState(key, value, TransactionType::T_CREATE)});
 }
 
 /**
@@ -224,9 +229,32 @@ void MP2Node::clientUpdate(string key, string value){
  * 				3) Sends a message to the replica
  */
 void MP2Node::clientDelete(string key){
-	/*
-	 * Implement this
-	 */
+	std::vector<Node> replicas = findNodes(key);
+
+  // Get the transaction ID for this transaction.
+	int currTransId = g_transID;
+	g_transID++;
+
+  // Iterate through the replicas.
+	for (int rIdx = 0; rIdx < replicas.size(); rIdx++)
+	{
+		// Construct the delete message for the replica.
+		Message dMsg = Message(
+			currTransId,
+			this->memberNode->addr,
+			MessageType::DELETE,
+			key);
+
+		// Send the delete message to the replica.
+		this->emulNet->ENsend(
+			&(this->memberNode->addr),
+			&(replicas[rIdx].nodeAddress),
+			dMsg.toString());
+	}
+
+	// Keep a record of the pending transaction.
+	// We use the TransactionState constructor for delete states.
+	incompleteTxns.insert({currTransId, TransactionState(key)});
 }
 
 /**
@@ -280,10 +308,7 @@ bool MP2Node::updateKeyValue(string key, string value, ReplicaType replica) {
  * 				2) Return true or false based on success or failure
  */
 bool MP2Node::deletekey(string key) {
-	/*
-	 * Implement this
-	 */
-	// Delete the key from the local hash table
+	return this->ht->deleteKey(key);
 }
 
 /**
@@ -318,6 +343,9 @@ void MP2Node::checkMessages() {
 		{
 			case MessageType::CREATE:
 			  handleCreateMessage(msg);
+				break;
+			case MessageType::DELETE:
+			  handleDeleteMessage(msg);
 				break;
 			case MessageType::REPLY:
 			  handleReplyMessage(msg);
@@ -420,6 +448,7 @@ void MP2Node::handleCreateMessage(Message& msg)
 {
 	bool created = this->createKeyValue(msg.key, msg.value, msg.replica);
 
+  // Log success or failure.
 	if (created)
 	{
 		this->log->logCreateSuccess(
@@ -439,11 +468,60 @@ void MP2Node::handleCreateMessage(Message& msg)
 			msg.value);
 	}
 
+  // Construct the reply message.
 	Message replyMsg = Message(
 		msg.transID,
 	  this->memberNode->addr,
 		MessageType::REPLY,
 		created);
+
+	// Send the reply back to the coordinator.
+	this->emulNet->ENsend(
+		&(this->memberNode->addr),
+		&(msg.fromAddr),
+		replyMsg.toString());
+}
+
+/**
+ * FUNCTION NAME: handleDeleteMessage
+ *
+ * DESCRIPTION: Performs the server-side handling of a delete message
+ *              That is, it:
+ *              1) Deletes the key-value pair on the server side
+ *              2) Logs whether the deletion was successful
+ *              3) Sends a reply back to the client node that initiated the
+ *                 delete.
+ */
+void MP2Node::handleDeleteMessage(Message& msg)
+{
+	bool deleted = this->deletekey(msg.key);
+
+	// Log success or failure.
+	if (deleted)
+	{
+		this->log->logDeleteSuccess(
+			&(this->memberNode->addr),
+			true,
+			msg.transID,
+			msg.key);
+	}
+	else
+	{
+		this->log->logDeleteFail(
+			&(this->memberNode->addr),
+			true,
+			msg.transID,
+			msg.key);
+	}
+
+	// Construct the reply message.
+	Message replyMsg = Message(
+		msg.transID,
+		this->memberNode->addr,
+		MessageType::REPLY,
+		deleted);
+
+	// Send the reply to the coordinator
 	this->emulNet->ENsend(
 		&(this->memberNode->addr),
 		&(msg.fromAddr),

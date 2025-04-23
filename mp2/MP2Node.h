@@ -45,7 +45,7 @@ public:
   string getKey() { return key; }
 	string getValue() { return value; }
 	TransactionType getTransactionType() { return type; }
-	
+
 	void recordSuccess() { successCount++; }
 	void recordFailure() { failureCount++; }
 
@@ -90,6 +90,7 @@ private:
 	std::unordered_map<int, TransactionState> incompleteTxns;
 
 	void handleCreateMessage(Message& msg);
+	void handleDeleteMessage(Message& msg);
 	void handleReplyMessage(Message& msg);
 
 	void logTransactionSuccess(int transId);
