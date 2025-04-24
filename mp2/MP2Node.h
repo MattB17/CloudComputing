@@ -91,6 +91,7 @@ private:
 
 	void handleCreateMessage(Message& msg);
 	void handleDeleteMessage(Message& msg);
+	void handleUpdateMessage(Message& msg);
 	void handleReplyMessage(Message& msg);
 
 	void logTransactionSuccess(int transId);

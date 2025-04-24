@@ -212,10 +212,36 @@ void MP2Node::clientRead(string key){
  * 				2) Finds the replicas of this key
  * 				3) Sends a message to the replica
  */
-void MP2Node::clientUpdate(string key, string value){
-	/*
-	 * Implement this
-	 */
+void MP2Node::clientUpdate(string key, string value)
+{
+	std::vector<Node> replicas = this->findNodes(key);
+	std::vector<ReplicaType> replicaTypes = {
+		ReplicaType::PRIMARY, ReplicaType::SECONDARY, ReplicaType::TERTIARY};
+
+	// Get the transaction id for this transaction.
+	int currTransId = this->getTransactionId();
+
+	for (int rIdx = 0; rIdx < 3; rIdx++)
+	{
+		// Construct the message to send to the replica
+		Message rMsg = Message(
+			currTransId,
+			this->memberNode->addr,
+			MessageType::UPDATE,
+			key,
+			value,
+			replicaTypes[rIdx]);
+
+		// Send the message to the replica
+		this->emulNet->ENsend(
+			&(this->memberNode->addr),
+			&(replicas[rIdx].nodeAddress),
+			rMsg.toString());
+	}
+
+	// The coordinator will track the pending transaction
+	incompleteTxns.insert(
+		{currTransId, TransactionState(key, value, TransactionType::T_UPDATE)});
 }
 
 /**
@@ -291,10 +317,7 @@ string MP2Node::readKey(string key) {
  * 				2) Return true or false based on success or failure
  */
 bool MP2Node::updateKeyValue(string key, string value, ReplicaType replica) {
-	/*
-	 * Implement this
-	 */
-	// Update key in local hash table and return true or false
+	return this->ht->update(key, value);
 }
 
 /**
@@ -344,6 +367,9 @@ void MP2Node::checkMessages() {
 				break;
 			case MessageType::DELETE:
 			  handleDeleteMessage(msg);
+				break;
+			case MessageType::UPDATE:
+			  handleUpdateMessage(msg);
 				break;
 			case MessageType::REPLY:
 			  handleReplyMessage(msg);
@@ -502,6 +528,43 @@ void MP2Node::handleDeleteMessage(Message& msg)
 	}
 
 	this->sendReplyToCoordinator(msg, deleted);
+}
+
+/**
+ * FUNCTION NAME: handleUpdateMessage
+ *
+ * DESCRIPTION: Performs the server-side handling of an update message
+ *              That is, it:
+ *              1) Updates the key-value pair on the server side
+ *              2) Logs whether the update was successful
+ *              3) Sends a reply back to the client node that initiated the
+ *                 update.
+ */
+void MP2Node::handleUpdateMessage(Message& msg)
+{
+	bool updated = this->updateKeyValue(msg.key, msg.value, msg.replica);
+
+	// Log success or failure.
+	if (updated)
+	{
+		this->log->logUpdateSuccess(
+			&(this->memberNode->addr),
+			true,
+			msg.transID,
+			msg.key,
+		  msg.value);
+	}
+	else
+	{
+		this->log->logUpdateFail(
+			&(this->memberNode->addr),
+			true,
+			msg.transID,
+			msg.key,
+		  msg.value);
+	}
+
+	this->sendReplyToCoordinator(msg, updated);
 }
 
 /*
