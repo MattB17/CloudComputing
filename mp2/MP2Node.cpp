@@ -13,14 +13,80 @@
 TransactionState::TransactionState(string k, string v, TransactionType t)
   : key(k), value(v), type(t), successCount(0), failureCount(0) {}
 
-	/**
-	 * CONSTRUCTOR
-	 *
-	 * Used in the case the transaction is a delete
-	 */
+/**
+ * CONSTRUCTOR
+ *
+ * Used in the case the transaction is a delete
+ */
 TransactionState::TransactionState(string k)
   : key(k), value(""), type(TransactionType::T_DELETE),
 	  successCount(0), failureCount(0) {}
+
+/**
+ * CONSTRUCTOR
+ */
+ReadTransactionState::ReadTransactionState(string k): key(k) {}
+
+/**
+ * FUNCTION NAME: recordReplicaValue
+ *
+ * DESCRIPTION: Records the value `v` received from a replica.
+ */
+void ReadTransactionState::recordReplicaValue(string v)
+{
+	auto vItr = this->valueCounts.find(v);
+
+	if (vItr == this->valueCounts.end())
+	{
+		// If we haven't seen this value before record it.
+		this->valueCounts.insert({v, 1});
+	}
+	else
+	{
+		// Otherwise, increment the count for this value
+		this->valueCounts[v]++;
+	}
+}
+
+/*
+ * FUNCTION NAME: hasReachedQuorum
+ *
+ * DESCRIPTION: Indicates whether we have reached a quorum for value `v`.
+ */
+bool ReadTransactionState::hasReachedQuorum(string v)
+{
+	auto vItr = this->valueCounts.find(v);
+
+	// If we've never seen this value, then obviously we don't have a quorum
+	// for this value.
+	if (vItr == this->valueCounts.end())
+	{
+		return false;
+	}
+	// Otherwise, we check if the count equals 2 (note if we checked >= we could
+  // potentially record a quorum multiple times if we receive the same value
+  // from all 3 replicas).
+	return vItr->second == 2;
+}
+
+/**
+ * FUNCTION NAME: allRepliesReceived
+ *
+ * DESCRIPTION: Indicates whether replies have been received from all replicas
+ *              and thus the transaction can be marked complete.
+ */
+bool ReadTransactionState::allRepliesReceived()
+{
+	int replyCount = 0;
+	for (auto itr = this->valueCounts.begin();
+	     itr != this->valueCounts.end();
+			 itr++)
+	{
+		replyCount += itr->second;
+	}
+
+	return replyCount == 3;
+}
 
 /**
  * constructor
