@@ -93,6 +93,9 @@ public:
   // Indicates whether we have reached a quorum for value `v`.
 	bool hasReachedQuorum(string v);
 
+	// Indicates whether a quorum was reached for any value.
+	bool hasReachedQuorum();
+
   // Indicates whether all replies for the transaction have been received.
 	bool allRepliesReceived();
 };
@@ -134,6 +137,7 @@ private:
 	void handleDeleteMessage(Message& msg);
 	void handleUpdateMessage(Message& msg);
 	void handleReplyMessage(Message& msg);
+	void handleReadReplyMessage(Message& msg);
 
 	void logTransactionSuccess(int transId);
 	void logTransactionFailure(int transId);

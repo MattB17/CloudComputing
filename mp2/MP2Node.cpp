@@ -70,6 +70,25 @@ bool ReadTransactionState::hasReachedQuorum(string v)
 }
 
 /**
+ * FUNCTION NAME: hasReachedQuorum
+ *
+ * DESCRIPTION: Indicates whether a quorum has been reached for any value.
+ */
+bool ReadTransactionState::hasReachedQuorum()
+{
+	for (auto itr = this->valueCounts.begin();
+       itr != this->valueCounts.end();
+		   itr++)
+	{
+		if (itr->second >= 2)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
  * FUNCTION NAME: allRepliesReceived
  *
  * DESCRIPTION: Indicates whether replies have been received from all replicas
@@ -462,8 +481,12 @@ void MP2Node::checkMessages() {
 			case MessageType::REPLY:
 			  handleReplyMessage(msg);
 				break;
+			case MessageType::READREPLY:
+			  handleReadReplyMessage(msg);
+				break;
 			default:
-			  break;
+			  std::cout << "Invalid message type received" << std::endl;
+			  exit(1);
 		}
 	}
 
@@ -742,6 +765,69 @@ void MP2Node::handleReplyMessage(Message& msg)
 	if (txnPointer->second.allRepliesReceived())
 	{
 		this->incompleteTxns.erase(msg.transID);
+	}
+}
+
+/**
+ * FUNCTION NAME: handleReadReplyMessage
+ *
+ * DESCRIPTION: Handles receipt of a read reply message.
+ *              That is, it
+ *              1) Checks the reply is for a pending read transaction.
+ *              2) Updates the set of received values for the transaction
+ *                 based on the message.
+ *              3) Checks if a quorum has been reached for that value and logs
+ *                 success or failure if so.
+ *              4) Removes the transaction and logs failure if no quorum could
+ *                 be reached.
+ */
+void MP2Node::handleReadReplyMessage(Message& msg)
+{
+	auto readTxnPointer = this->pendingReads.find(msg.transID);
+	if (readTxnPointer == this->pendingReads.end())
+	{
+		// This is not a pending transaction, so discard the message.
+		return;
+	}
+
+	readTxnPointer->second.recordReplicaValue(msg.value);
+	if (readTxnPointer->second.hasReachedQuorum(msg.value))
+	{
+		if (msg.value.compare("") == 0)
+		{
+			// A quorum of nodes did not find the key.
+			this->log->logReadFail(
+				&(this->memberNode->addr),
+				true,
+				msg.transID,
+				msg.key);
+		}
+		else
+		{
+			// Otherwise a quorum of nodes returned the same value.
+			this->log->logReadSuccess(
+				&(this->memberNode->addr),
+				true,
+				msg.transID,
+				msg.key,
+				msg.value);
+		}
+	}
+
+	if (readTxnPointer->second.allRepliesReceived())
+	{
+		// If we did not receive a quorum for any value, then log read failure.
+		if (!readTxnPointer->second.hasReachedQuorum())
+		{
+			this->log->logReadFail(
+				&(this->memberNode->addr),
+				true,
+				msg.transID,
+				msg.key);
+		}
+
+		// We have received all replies so this transaction is no longer pending.
+		this->pendingReads.erase(msg.transID);
 	}
 }
 
