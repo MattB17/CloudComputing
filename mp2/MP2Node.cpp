@@ -263,10 +263,32 @@ void MP2Node::clientCreate(string key, string value) {
  * 				2) Finds the replicas of this key
  * 				3) Sends a message to the replica
  */
-void MP2Node::clientRead(string key){
-	/*
-	 * Implement this
-	 */
+void MP2Node::clientRead(string key)
+{
+	std::vector<Node> replicas = findNodes(key);
+
+	// Get an ID for the current transaction.
+	int currTransId = getTransactionId();
+
+	// Iterate through the replicas.
+	for (int rIdx = 0; rIdx < replicas.size(); rIdx++)
+	{
+		// Construct message for the replica.
+		Message rMsg = Message(
+			currTransId,
+			this->memberNode->addr,
+			MessageType::READ,
+			key);
+
+		// Send the read message to the replica.
+		this->emulNet->ENsend(
+			&(this->memberNode->addr),
+			&(replicas[rIdx].nodeAddress),
+			rMsg.toString());
+	}
+
+	// Keep a record of the pending read transaction.
+	this->pendingReads.insert({currTransId, ReadTransactionState(key)});
 }
 
 /**
@@ -368,10 +390,7 @@ bool MP2Node::createKeyValue(string key, string value, ReplicaType replica) {
  * 			    2) Return value
  */
 string MP2Node::readKey(string key) {
-	/*
-	 * Implement this
-	 */
-	// Read key from local hash table and return value
+	return this->ht->read(key);
 }
 
 /**
@@ -430,6 +449,9 @@ void MP2Node::checkMessages() {
 		{
 			case MessageType::CREATE:
 			  handleCreateMessage(msg);
+				break;
+			case MessageType::READ:
+			  handleReadMessage(msg);
 				break;
 			case MessageType::DELETE:
 			  handleDeleteMessage(msg);
@@ -562,6 +584,50 @@ void MP2Node::handleCreateMessage(Message& msg)
 }
 
 /**
+ * FUNCTION NAME: handleReadMessage
+ *
+ * DESCRIPTION: Performs the server-side handling of a read message.
+ *              That is, it
+ *              1) Tries to read the value for the requested key
+ *              2) Logs whether the read was successful
+ *              3) Sends a read reply back to the coordinator
+ */
+void MP2Node::handleReadMessage(Message& msg)
+{
+	string val = this->readKey(msg.key);
+
+	if (val.compare("") == 0)
+	{
+		// If the value is the empty string, the read failed.
+		this->log->logReadFail(
+			&(this->memberNode->addr),
+			false,
+			msg.transID,
+			msg.key);
+	}
+	else
+	{
+		// Otherwise the read succeeded.
+		this->log->logReadSuccess(
+			&(this->memberNode->addr),
+			false,
+			msg.transID,
+			msg.key,
+			val);
+	}
+
+	// Send reply to the coordinator
+	Message replyMsg = Message(
+		msg.transID,
+		this->memberNode->addr,
+		msg.key);
+	this->emulNet->ENsend(
+		&(this->memberNode->addr),
+		&(msg.fromAddr),
+		replyMsg.toString());
+}
+
+/**
  * FUNCTION NAME: handleDeleteMessage
  *
  * DESCRIPTION: Performs the server-side handling of a delete message
@@ -580,7 +646,7 @@ void MP2Node::handleDeleteMessage(Message& msg)
 	{
 		this->log->logDeleteSuccess(
 			&(this->memberNode->addr),
-			true,
+			false,
 			msg.transID,
 			msg.key);
 	}
@@ -588,7 +654,7 @@ void MP2Node::handleDeleteMessage(Message& msg)
 	{
 		this->log->logDeleteFail(
 			&(this->memberNode->addr),
-			true,
+			false,
 			msg.transID,
 			msg.key);
 	}
@@ -615,7 +681,7 @@ void MP2Node::handleUpdateMessage(Message& msg)
 	{
 		this->log->logUpdateSuccess(
 			&(this->memberNode->addr),
-			true,
+			false,
 			msg.transID,
 			msg.key,
 		  msg.value);
@@ -624,7 +690,7 @@ void MP2Node::handleUpdateMessage(Message& msg)
 	{
 		this->log->logUpdateFail(
 			&(this->memberNode->addr),
-			true,
+			false,
 			msg.transID,
 			msg.key,
 		  msg.value);

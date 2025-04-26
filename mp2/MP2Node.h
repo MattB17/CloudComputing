@@ -127,8 +127,10 @@ private:
 	Log * log;
 
 	std::unordered_map<int, TransactionState> incompleteTxns;
+	std::unordered_map<int, ReadTransactionState> pendingReads;
 
 	void handleCreateMessage(Message& msg);
+	void handleReadMessage(Message& msg);
 	void handleDeleteMessage(Message& msg);
 	void handleUpdateMessage(Message& msg);
 	void handleReplyMessage(Message& msg);
