@@ -643,7 +643,7 @@ void MP2Node::handleReadMessage(Message& msg)
 	Message replyMsg = Message(
 		msg.transID,
 		this->memberNode->addr,
-		msg.key);
+		val);
 	this->emulNet->ENsend(
 		&(this->memberNode->addr),
 		&(msg.fromAddr),
@@ -800,7 +800,7 @@ void MP2Node::handleReadReplyMessage(Message& msg)
 				&(this->memberNode->addr),
 				true,
 				msg.transID,
-				msg.key);
+				readTxnPointer->second.getKey());
 		}
 		else
 		{
@@ -809,7 +809,7 @@ void MP2Node::handleReadReplyMessage(Message& msg)
 				&(this->memberNode->addr),
 				true,
 				msg.transID,
-				msg.key,
+				readTxnPointer->second.getKey(),
 				msg.value);
 		}
 	}
@@ -823,7 +823,7 @@ void MP2Node::handleReadReplyMessage(Message& msg)
 				&(this->memberNode->addr),
 				true,
 				msg.transID,
-				msg.key);
+				readTxnPointer->second.getKey());
 		}
 
 		// We have received all replies so this transaction is no longer pending.
