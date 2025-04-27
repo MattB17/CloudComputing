@@ -19,37 +19,42 @@
 #include "Message.h"
 #include "Queue.h"
 
+#define TRANSACTION_TIMEOUT 10
+
 // Transaction types
 enum TransactionType {T_CREATE, T_READ, T_UPDATE, T_DELETE};
 
 /*
- * CLASS NAME: TransactionState
+ * CLASS NAME: WriteTransactionState
  *
- * DESCRIPTION: Used to handle the state of pending transactions.
+ * DESCRIPTION: Used to handle the state of pending write transactions.
  *
  * This class is only intended for creates, updates, or deletes as we do not
  * need to reconcile possibly conflicting values between the replicas. Rather
  * we just need to track whether the operations were successful or not at each
  * replica and monitor when a quorum is reached.
  */
-class TransactionState {
+class WriteTransactionState {
 private:
 	string key;
 	string value;
 	TransactionType type;
+  int startTime;
 	short successCount;
 	short failureCount;
 
 public:
 	// For create or update transactions
-	TransactionState(string k, string v, TransactionType t);
+	WriteTransactionState(string k, string v, TransactionType t, int currTime);
 
   // For delete transactions
-	TransactionState(string k);
+	WriteTransactionState(string k, int currTime);
 
   string getKey() { return key; }
 	string getValue() { return value; }
 	TransactionType getTransactionType() { return type; }
+
+	bool hasTransactionExpired(int currTime);
 
 	void recordSuccess() { successCount++; }
 	void recordFailure() { failureCount++; }
@@ -78,15 +83,18 @@ public:
 class ReadTransactionState {
 private:
 	string key;
+	int startTime;
 	// Used to record the counts for each value seen among the replicas.
 	// ie. if 2 replicas have the value `v` then `valueCounts` should have an
 	// entry for `v` with a count of 2.
 	unordered_map<string, int> valueCounts;
 
 public:
-	ReadTransactionState(string k);
+	ReadTransactionState(string k, int currTime);
 
 	string getKey() { return key; }
+
+	bool hasTransactionExpired(int currTime);
 
 	void recordReplicaValue(string v);
 
@@ -129,7 +137,7 @@ private:
 	// Object of Log
 	Log * log;
 
-	std::unordered_map<int, TransactionState> incompleteTxns;
+	std::unordered_map<int, WriteTransactionState> pendingWrites;
 	std::unordered_map<int, ReadTransactionState> pendingReads;
 
 	void handleCreateMessage(Message& msg);
@@ -139,11 +147,15 @@ private:
 	void handleReplyMessage(Message& msg);
 	void handleReadReplyMessage(Message& msg);
 
-	void logTransactionSuccess(int transId);
-	void logTransactionFailure(int transId);
+	void logWriteSuccess(int transId);
+	void logWriteFailure(int transId);
 
 	int getTransactionId();
 	void sendReplyToCoordinator(Message& coordMsg, bool operationSucceeded);
+
+	// Cleans up any transactions that have expired, recording failures if a
+	// quorum was not reached.
+	void removeExpiredTransactions();
 
 public:
 	MP2Node(Member *memberNode, Params *par, EmulNet *emulNet, Log *log, Address *addressOfMember);

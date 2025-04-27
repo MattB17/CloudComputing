@@ -10,22 +10,45 @@
  *
  * Used in the case the transaction is a create or update
  */
-TransactionState::TransactionState(string k, string v, TransactionType t)
-  : key(k), value(v), type(t), successCount(0), failureCount(0) {}
+WriteTransactionState::WriteTransactionState(
+	string k, string v, TransactionType t, int currTime)
+  : key(k), value(v), type(t), startTime(currTime),
+	  successCount(0), failureCount(0) {}
 
 /**
  * CONSTRUCTOR
  *
  * Used in the case the transaction is a delete
  */
-TransactionState::TransactionState(string k)
+WriteTransactionState::WriteTransactionState(string k, int currTime)
   : key(k), value(""), type(TransactionType::T_DELETE),
-	  successCount(0), failureCount(0) {}
+	  startTime(currTime), successCount(0), failureCount(0) {}
+
+/**
+ * FUNCTION NAME: hasTransactionExpired
+ *
+ * DESCRIPTION: indicates whether the transaction has expired.
+ */
+bool WriteTransactionState::hasTransactionExpired(int currTime)
+{
+	return currTime - this->startTime > TRANSACTION_TIMEOUT;
+}
 
 /**
  * CONSTRUCTOR
  */
-ReadTransactionState::ReadTransactionState(string k): key(k) {}
+ReadTransactionState::ReadTransactionState(
+	string k, int currTime): key(k), startTime(currTime) {}
+
+/**
+ * FUNCTION NAME: hasTransactionExpired
+ *
+ * DESCRIPTION: Indicates whether the transaction has timed out.
+ */
+bool ReadTransactionState::hasTransactionExpired(int currTime)
+{
+	return currTime - this->startTime > TRANSACTION_TIMEOUT;
+}
 
 /**
  * FUNCTION NAME: recordReplicaValue
@@ -269,8 +292,8 @@ void MP2Node::clientCreate(string key, string value) {
 	}
 
   // Keep a record of the pending transaction.
-	incompleteTxns.insert(
-		{currTransId, TransactionState(key, value, TransactionType::T_CREATE)});
+	this->pendingWrites.insert({currTransId, WriteTransactionState(
+		key, value, TransactionType::T_CREATE, this->par->getcurrtime())});
 }
 
 /**
@@ -307,7 +330,8 @@ void MP2Node::clientRead(string key)
 	}
 
 	// Keep a record of the pending read transaction.
-	this->pendingReads.insert({currTransId, ReadTransactionState(key)});
+	this->pendingReads.insert(
+		{currTransId, ReadTransactionState(key, this->par->getcurrtime())});
 }
 
 /**
@@ -347,8 +371,8 @@ void MP2Node::clientUpdate(string key, string value)
 	}
 
 	// The coordinator will track the pending transaction
-	incompleteTxns.insert(
-		{currTransId, TransactionState(key, value, TransactionType::T_UPDATE)});
+	this->pendingWrites.insert({currTransId, WriteTransactionState(
+		key, value, TransactionType::T_UPDATE, this->par->getcurrtime())});
 }
 
 /**
@@ -384,8 +408,9 @@ void MP2Node::clientDelete(string key){
 	}
 
 	// Keep a record of the pending transaction.
-	// We use the TransactionState constructor for delete states.
-	incompleteTxns.insert({currTransId, TransactionState(key)});
+	// We use the WriteTransactionState constructor for delete states.
+	this->pendingWrites.insert(
+		{currTransId, WriteTransactionState(key, this->par->getcurrtime())});
 }
 
 /**
@@ -490,10 +515,7 @@ void MP2Node::checkMessages() {
 		}
 	}
 
-	/*
-	 * This function should also ensure all READ and UPDATE operation
-	 * get QUORUM replies
-	 */
+	this->removeExpiredTransactions();
 }
 
 /**
@@ -737,8 +759,8 @@ void MP2Node::handleUpdateMessage(Message& msg)
  */
 void MP2Node::handleReplyMessage(Message& msg)
 {
-	auto txnPointer = this->incompleteTxns.find(msg.transID);
-	if (txnPointer == this->incompleteTxns.end())
+	auto txnPointer = this->pendingWrites.find(msg.transID);
+	if (txnPointer == this->pendingWrites.end())
 	{
 		// This is not a pending transaction, so discard the message.
 		return;
@@ -755,16 +777,16 @@ void MP2Node::handleReplyMessage(Message& msg)
 
 	if (txnPointer->second.hasTransactionSucceeded())
 	{
-		logTransactionSuccess(msg.transID);
+		logWriteSuccess(msg.transID);
 	}
 	else if (txnPointer->second.hasTransactionFailed())
 	{
-		logTransactionFailure(msg.transID);
+		logWriteFailure(msg.transID);
 	}
 
 	if (txnPointer->second.allRepliesReceived())
 	{
-		this->incompleteTxns.erase(msg.transID);
+		this->pendingWrites.erase(msg.transID);
 	}
 }
 
@@ -832,15 +854,15 @@ void MP2Node::handleReadReplyMessage(Message& msg)
 }
 
 /*
- * FUNCTION NAME: logTransactionSuccess
+ * FUNCTION NAME: logWriteSuccess
  *
- * DESCRIPTION: Logs the successful completion of a transaction from the
+ * DESCRIPTION: Logs the successful completion of a write transaction from the
  *              coordinator node.
  */
-void MP2Node::logTransactionSuccess(int transId)
+void MP2Node::logWriteSuccess(int transId)
 {
-	auto txnPointer = this->incompleteTxns.find(transId);
-	if (txnPointer == incompleteTxns.end()) {
+	auto txnPointer = this->pendingWrites.find(transId);
+	if (txnPointer == this->pendingWrites.end()) {
 		return;
 	}
 
@@ -877,15 +899,15 @@ void MP2Node::logTransactionSuccess(int transId)
 
 
 /*
- * FUNCTION NAME: logTransactionFailure
+ * FUNCTION NAME: logWriteFailure
  *
- * DESCRIPTION: Logs the unsuccessful completion of a transaction from the
+ * DESCRIPTION: Logs the unsuccessful completion of a write transaction from the
  *              coordinator node.
  */
-void MP2Node::logTransactionFailure(int transId)
+void MP2Node::logWriteFailure(int transId)
 {
-	auto txnPointer = this->incompleteTxns.find(transId);
-	if (txnPointer == incompleteTxns.end()) {
+	auto txnPointer = this->pendingWrites.find(transId);
+	if (txnPointer == this->pendingWrites.end()) {
 		return;
 	}
 
@@ -954,4 +976,95 @@ void MP2Node::sendReplyToCoordinator(Message& coordMsg, bool operationSucceeded)
 		&(this->memberNode->addr),
 		&(coordMsg.fromAddr),
 		replyMsg.toString());
+}
+
+/**
+ * FUNCTION NAME: removeExpiredTransactions
+ *
+ * DESCRIPTION: removes any pending read or write transactions that have expired
+ *              (have timed out).
+ *              Logs a failure for any removed transactions that could not reach
+ *              a quorum before the timeout.
+ */
+void MP2Node::removeExpiredTransactions()
+{
+	int currTime = par->getcurrtime();
+
+	std::unordered_map<int, ReadTransactionState> pendingReads;
+	// Start with the read transactions.
+	for (auto readTxnPointer = this->pendingReads.begin();
+       readTxnPointer != this->pendingReads.end();
+		   readTxnPointer++)
+	{
+		if (readTxnPointer->second.hasTransactionExpired(currTime))
+		{
+		  // Any reads here are pending, meaning not all replies were received.
+		  // However, they may have already reached a quorum even without all replies.
+		  if (!readTxnPointer->second.hasReachedQuorum())
+		  {
+			  // If it hasn't reached a quorum then it timed out and failed.
+			  this->log->logReadFail(
+				  &(this->memberNode->addr),
+				  true,
+				  readTxnPointer->first,
+				  readTxnPointer->second.getKey());
+		  }
+		}
+		else
+		{
+			pendingReads.insert({readTxnPointer->first, readTxnPointer->second});
+		}
+	}
+	this->pendingReads = pendingReads;
+
+  std::unordered_map<int, WriteTransactionState> pendingWrites;
+	// Next do write transactions.
+	for (auto writeTxnPointer = this->pendingWrites.begin();
+       writeTxnPointer != this->pendingWrites.end();
+		   writeTxnPointer++)
+	{
+		if (writeTxnPointer->second.hasTransactionExpired(currTime))
+		{
+		  // Any writes here are pending, meaning not all replies were received.
+		  // However we could have already received a quorum of successes or failures.
+      if (!writeTxnPointer->second.hasTransactionSucceeded() &&
+		      !writeTxnPointer->second.hasTransactionFailed())
+		  {
+			  switch (writeTxnPointer->second.getTransactionType())
+			  {
+				  case TransactionType::T_CREATE:
+				    this->log->logCreateFail(
+						  &(this->memberNode->addr),
+						  true,
+						  writeTxnPointer->first,
+						  writeTxnPointer->second.getKey(),
+						  writeTxnPointer->second.getValue());
+					  break;
+				  case TransactionType::T_UPDATE:
+				    this->log->logUpdateFail(
+						  &(this->memberNode->addr),
+						  true,
+						  writeTxnPointer->first,
+						  writeTxnPointer->second.getKey(),
+						  writeTxnPointer->second.getValue());
+					  break;
+				  case TransactionType::T_DELETE:
+				    this->log->logDeleteFail(
+						  &(this->memberNode->addr),
+						  true,
+						  writeTxnPointer->first,
+						  writeTxnPointer->second.getKey());
+					  break;
+				  default:
+				    std::cout << "Invalid write transaction type" << std::endl;
+					  exit(1);
+			  }
+			}
+		}
+		else
+		{
+			pendingWrites.insert({writeTxnPointer->first, writeTxnPointer->second});
+		}
+	}
+	this->pendingWrites = pendingWrites;
 }
