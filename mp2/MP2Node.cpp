@@ -160,10 +160,8 @@ MP2Node::~MP2Node() {
  * 				2) Constructs the ring based on the membership list
  * 				3) Calls the Stabilization Protocol
  */
-void MP2Node::updateRing() {
-	/*
-	 * Implement this. Parts of it are already implemented
-	 */
+void MP2Node::updateRing()
+{
 	vector<Node> currMemList;
 	// Indicates whether the ring has changed
 	bool change = false;

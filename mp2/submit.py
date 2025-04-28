@@ -4,18 +4,20 @@
 #*
 #* Current file: submit.py
 #* About this file: Submission python script.
-#* 
+#*
 #***********************
 
-import urllib
-import urllib2
+from urllib.parse import urlparse, urlencode
+from urllib.request import urlopen, Request
+from urllib.error import HTTPError
 import hashlib
 import random
 import email
 import email.message
 import email.encoders
-import StringIO
+import io
 import sys
+import ssl
 import subprocess
 import json
 import os
@@ -26,12 +28,12 @@ class NullDevice:
   def write(self, s):
     pass
 
-def submit():   
-  print '==\n== [sandbox] Submitting Solutions \n=='
-  
+def submit():
+  print('==\n== [sandbox] Submitting Solutions \n==')
+
   (login, password) = loginPrompt()
   if not login:
-    print '!! Submission Cancelled'
+    print('!! Submission Cancelled')
     return
 
 
@@ -51,17 +53,17 @@ def loginPrompt():
 
 def basicPrompt():
   """Prompt the user for login credentials. Returns a tuple (login, password)."""
-  login = raw_input('Login (Email address): ')
-  password = raw_input('One-time Password (from the assignment page. This is NOT your own account\'s password): ')
+  login = input('Login (Email address): ')
+  password = input('One-time Password (from the assignment page. This is NOT your own account\'s password): ')
   return login, password
 
 def partPrompt():
-  print 'Hello! These are the assignment parts that you can submit:'
+  print('Hello! These are the assignment parts that you can submit:')
   counter = 0
   for part in partFriendlyNames:
     counter += 1
-    print str(counter) + ') ' + partFriendlyNames[counter - 1]
-  partIdx = int(raw_input('Please enter which part you want to submit (1-' + str(counter) + '): ')) - 1
+    print(str(counter) + ') ' + partFriendlyNames[counter - 1])
+  partIdx = int(input('Please enter which part you want to submit (1-' + str(counter) + '): ')) - 1
   return (partIdx, partIds[partIdx])
 
 
@@ -72,7 +74,7 @@ def submit_url():
 
 def submitSolution(email_address, password, submissions):
   """Submits a solution to the server. Returns (result, string)."""
-  values = { 
+  values = {
       "assignmentKey": akey,  \
       "submitterEmail": email_address, \
       "secret": password, \
@@ -92,21 +94,22 @@ def submitSolution(email_address, password, submissions):
       }
     }
   url = submit_url()
-  data = json.dumps(values)
-  req = urllib2.Request(url)
+  # (Compatibility update) Need to encode as utf-8 to get bytes for Python3:
+  data = json.dumps(values).encode('utf-8')
+  req = Request(url)
   req.add_header('Content-Type', 'application/json')
   req.add_header('Cache-Control', 'no-cache')
-  response = urllib2.urlopen(req, data)
+  response = urlopen(req, data)
   return
 
-## This collects the source code (just for logging purposes) 
+## This collects the source code (just for logging purposes)
 def source(partIdx):
   # open the file, get all lines
   f = open("dbg.%d.log" % partIdx)
-  src = f.read() 
+  src = f.read()
   f.close()
   return src
-  
+
 def cleanup():
     for i in range(4):
         try:
@@ -121,9 +124,8 @@ akey = 'Lm64BvbLEeWEJw5JS44kjw'
 # the "Identifier" you used when creating the part
 partIds = ['PH3Q7', 'PIXym', 'mUKdC', 'peNB6']
 # used to generate readable run-time information for students
-partFriendlyNames = ['Create Test', 'Delete Test', 'Read Test', 'Update Test'] 
+partFriendlyNames = ['Create Test', 'Delete Test', 'Read Test', 'Update Test']
 # source files to collect (just for our records)
 submit()
 
 cleanup()
-

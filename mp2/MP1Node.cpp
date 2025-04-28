@@ -484,7 +484,7 @@ void MP1Node::addMembershipEntry(Address* newAddr, long newHeartbeat)
 
 	memTableIdx[newAddrStr] = memberNode->memberList.size();
 	memberNode->memberList.push_back(mle);
-	log->logNodeAdd(&memberNode->addr, newAddr);
+	// log->logNodeAdd(&memberNode->addr, newAddr);
   memberNode->nnb++;
 }
 
@@ -503,7 +503,7 @@ void MP1Node::logEvent(const char* eventMsg, Address* addr) {
 					  addr->addr[2],
 					  addr->addr[3],
 					  addressHandler->portFromAddress(addr));
-	  log->LOG(&memberNode->addr, logMsg);
+	  //log->LOG(&memberNode->addr, logMsg);
 	#endif
 }
 
@@ -514,7 +514,7 @@ void MP1Node::logEvent(const char* eventMsg, Address* addr) {
  */
 void MP1Node::logMsg(const char* msg) {
 	#ifdef DEBUGLOG
-	  log->LOG(&memberNode->addr, msg);
+	  //log->LOG(&memberNode->addr, msg);
 	#endif
 }
 
@@ -543,7 +543,7 @@ void MP1Node::cleanMemberList() {
 		}
 		else
 		{
-			log->logNodeRemove(&memberNode->addr, &entryAddr);
+			// log->logNodeRemove(&memberNode->addr, &entryAddr);
 			memTableIdx.erase(entryAddrStr);
 			memberNode->nnb--;
 		}
