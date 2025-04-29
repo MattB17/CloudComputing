@@ -167,6 +167,10 @@ private:
 	// the 2 predecessors and 2 successors of this node on the ring.
 	void initializeNeighbourhood();
 
+  // Sets the neighbourhood (2 successors and 2 predecessors) based on the
+	// node's position on the ring.
+	void setNeighbourhood(int myPosOnRing);
+
 public:
 	MP2Node(Member *memberNode, Params *par, EmulNet *emulNet, Log *log, Address *addressOfMember);
 	Member * getMemberNode() {

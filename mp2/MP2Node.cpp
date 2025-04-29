@@ -522,6 +522,9 @@ void MP2Node::checkMessages() {
 		string message(data, data + size);
 		Message msg = Message(message);
 
+    // Note: when re-replicating for failures / nodes joining we set the
+		// transaction ID to -1 and do the necessary creates/deletes/updates but
+		// without logging or replying to the coordinator.
 		switch (msg.type)
 		{
 			case MessageType::CREATE:
@@ -619,8 +622,48 @@ int MP2Node::enqueueWrapper(void *env, char *buff, int size) {
  *				Note:- "CORRECT" replicas implies that every key is replicated in its two neighboring nodes in the ring
  */
 void MP2Node::stabilizationProtocol() {
+  // We first iterate through the ring to find our position as well as the
+	// position of our successors and predecessors if they are still alive.
+	// Note: even if they are still alive they might not be in the same position
+	// on the ring because of nodes joining and/or failing.
 	std::vector<bool> haveReplicasOfAlive = std::vector<bool>({false, false});
 	std::vector<bool> hasMyReplicasAlive = std::vector<bool>({false, false});
+	int myPos = -1;
+
+	for (int ringPos = 0; ringPos < this->ring.size(); ringPos++)
+	{
+		if (!haveReplicasOfAlive[0] && (this->ring[ringPos].nodeAddress ==
+			  this->haveReplicasOf[0].nodeAddress))
+		{
+			haveReplicasOfAlive[0] = true;
+		}
+		else if (!haveReplicasOfAlive[1] && (this->ring[ringPos].nodeAddress ==
+			       this->haveReplicasOf[1].nodeAddress))
+		{
+			haveReplicasOfAlive[1] = true;
+		}
+		else if (this->ring[ringPos].nodeAddress == this->memberNode->addr)
+		{
+			myPos = ringPos;
+		}
+		else if (!hasMyReplicasAlive[0] && (this->ring[ringPos].nodeAddress ==
+		         this->hasMyReplicas[0].nodeAddress))
+		{
+			hasMyReplicasAlive[0] = true;
+		}
+		else if (!hasMyReplicasAlive[1] && (this->ring[ringPos].nodeAddress ==
+		         this->hasMyReplicas[1].nodeAddress))
+		{
+			hasMyReplicasAlive[1] = true;
+		}
+	}
+
+  // Copy old values as these will be needed for replica management.
+	std::vector<Node> oldHaveReplicasOf = this->haveReplicasOf;
+	std::vector<Node> oldHasMyReplicas = this->hasMyReplicas;
+
+  // Update successors and predecessors.
+	this->setNeighbourhood(myPos);
 }
 
 /**
@@ -637,27 +680,32 @@ void MP2Node::handleCreateMessage(Message& msg)
 {
 	bool created = this->createKeyValue(msg.key, msg.value, msg.replica);
 
-  // Log success or failure.
-	if (created)
+  // We only do logging and sending a reply to the coordinator if it is a
+	// transaction. Transaction ID -1 is used for handling re-replication.
+	if (msg.transID >= 0)
 	{
-		this->log->logCreateSuccess(
-			&(this->memberNode->addr),
-			false,
-			msg.transID,
-			msg.key,
-			msg.value);
-	}
-	else
-	{
-		this->log->logCreateFail(
-			&(this->memberNode->addr),
-			false,
-			msg.transID,
-			msg.key,
-			msg.value);
-	}
+    // Log success or failure.
+	  if (created)
+	  {
+		  this->log->logCreateSuccess(
+			  &(this->memberNode->addr),
+			  false,
+			  msg.transID,
+			  msg.key,
+			  msg.value);
+	  }
+	  else
+	  {
+		  this->log->logCreateFail(
+			  &(this->memberNode->addr),
+			  false,
+			  msg.transID,
+			  msg.key,
+			  msg.value);
+	  }
 
-	this->sendReplyToCoordinator(msg, created);
+	  this->sendReplyToCoordinator(msg, created);
+	}
 }
 
 /**
@@ -718,25 +766,30 @@ void MP2Node::handleDeleteMessage(Message& msg)
 {
 	bool deleted = this->deletekey(msg.key);
 
-	// Log success or failure.
-	if (deleted)
+	// We only do logging and sending a reply to the coordinator if it is a
+	// transaction. Transaction ID -1 is used for handling re-replication.
+	if (msg.transID >= 0)
 	{
-		this->log->logDeleteSuccess(
-			&(this->memberNode->addr),
-			false,
-			msg.transID,
-			msg.key);
-	}
-	else
-	{
-		this->log->logDeleteFail(
-			&(this->memberNode->addr),
-			false,
-			msg.transID,
-			msg.key);
-	}
+	  // Log success or failure.
+	  if (deleted)
+	  {
+		  this->log->logDeleteSuccess(
+			  &(this->memberNode->addr),
+			  false,
+			  msg.transID,
+			  msg.key);
+	  }
+	  else
+	  {
+		  this->log->logDeleteFail(
+			  &(this->memberNode->addr),
+			  false,
+			  msg.transID,
+			  msg.key);
+	  }
 
-	this->sendReplyToCoordinator(msg, deleted);
+	  this->sendReplyToCoordinator(msg, deleted);
+	}
 }
 
 /**
@@ -753,27 +806,32 @@ void MP2Node::handleUpdateMessage(Message& msg)
 {
 	bool updated = this->updateKeyValue(msg.key, msg.value, msg.replica);
 
-	// Log success or failure.
-	if (updated)
+	// We only do logging and sending a reply to the coordinator if it is a
+	// transaction. Transaction ID -1 is used for handling re-replication.
+	if (msg.transID >= 0)
 	{
-		this->log->logUpdateSuccess(
-			&(this->memberNode->addr),
-			false,
-			msg.transID,
-			msg.key,
-		  msg.value);
-	}
-	else
-	{
-		this->log->logUpdateFail(
-			&(this->memberNode->addr),
-			false,
-			msg.transID,
-			msg.key,
-		  msg.value);
-	}
+	  // Log success or failure.
+	  if (updated)
+	  {
+		  this->log->logUpdateSuccess(
+			  &(this->memberNode->addr),
+			  false,
+			  msg.transID,
+			  msg.key,
+		    msg.value);
+	  }
+	  else
+	  {
+		  this->log->logUpdateFail(
+			  &(this->memberNode->addr),
+			  false,
+			  msg.transID,
+			  msg.key,
+		    msg.value);
+	  }
 
-	this->sendReplyToCoordinator(msg, updated);
+	  this->sendReplyToCoordinator(msg, updated);
+	}
 }
 
 /*
@@ -1106,7 +1164,7 @@ void MP2Node::removeExpiredTransactions()
  *
  * Description: Initializes the neighbourhood of the node, consisting of its
  *              2 predecessors and 2 successors on the ring.
- *              That is, it sets the hasMyReplias and haveReplicasOf vectors.
+ *              That is, it sets the hasMyReplicas and haveReplicasOf vectors.
  */
 void MP2Node::initializeNeighbourhood()
 {
@@ -1127,9 +1185,23 @@ void MP2Node::initializeNeighbourhood()
 		exit(1);
 	}
 
-	// Now set the 2 predecessors.
+	// Set the predecessors and successors.
+	this->setNeighbourhood(myPos);
+
+	return;
+}
+
+/**
+ * FUNCTION NAME: setNeighbourhood
+ *
+ * DESCRIPTION: Sets the 2 successors and 2 predecessors of the node based on
+ *              the nodes position in the ring, given by `myPosOnRing`.
+ */
+void MP2Node::setNeighbourhood(int myPosOnRing)
+{
+	// Set the 2 predecessors.
 	this->haveReplicasOf = std::vector<Node>();
-	for (int currPos = myPos - 2; currPos < myPos; currPos++)
+	for (int currPos = myPosOnRing - 2; currPos < myPosOnRing; currPos++)
 	{
 		this->haveReplicasOf.emplace_back(
 			this->ring.at((currPos % this->ring.size())));
@@ -1137,7 +1209,7 @@ void MP2Node::initializeNeighbourhood()
 
 	// Then set the 2 successors.
 	this->hasMyReplicas = std::vector<Node>();
-	for (int currPos = myPos; currPos < myPos + 2; currPos++)
+	for (int currPos = myPosOnRing; currPos < myPosOnRing + 2; currPos++)
 	{
 		this->hasMyReplicas.emplace_back(
 			this->ring.at(((currPos + 1) % this->ring.size())));
