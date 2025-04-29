@@ -200,6 +200,7 @@ void MP2Node::updateRing()
 		}
 	}
 
+  bool ringUninitialized = this->haveReplicasOf.size() == 0;
 	// Then assign the current membership list to the ring
 	this->ring = currMemList;
 
@@ -207,9 +208,14 @@ void MP2Node::updateRing()
 	/*
 	 * Step 3: Run the stabilization protocol IF REQUIRED
 	 */
-	// Run stabilization protocol if there has been a change in the ring
-	if (change)
+	if (ringUninitialized && this->ring.size() >= 3)
 	{
+		this->initializeNeighbourhood();
+	}
+	else if (change && !this->ht->isEmpty())
+	{
+		// Run stabilization protocol if there has been a change in the ring and the
+		// hash table is not empty.
 		this->stabilizationProtocol();
 	}
 }
@@ -613,9 +619,8 @@ int MP2Node::enqueueWrapper(void *env, char *buff, int size) {
  *				Note:- "CORRECT" replicas implies that every key is replicated in its two neighboring nodes in the ring
  */
 void MP2Node::stabilizationProtocol() {
-	/*
-	 * Implement this
-	 */
+	std::vector<bool> haveReplicasOfAlive = std::vector<bool>({false, false});
+	std::vector<bool> hasMyReplicasAlive = std::vector<bool>({false, false});
 }
 
 /**
@@ -1094,4 +1099,49 @@ void MP2Node::removeExpiredTransactions()
 		}
 	}
 	this->pendingWrites = pendingWrites;
+}
+
+/**
+ * FUNCTION NAME: initializeNeighbourhood
+ *
+ * Description: Initializes the neighbourhood of the node, consisting of its
+ *              2 predecessors and 2 successors on the ring.
+ *              That is, it sets the hasMyReplias and haveReplicasOf vectors.
+ */
+void MP2Node::initializeNeighbourhood()
+{
+	// First find my position on ring.
+	int myPos = -1;
+	for (int idx = 0; idx < this->ring.size(); idx++)
+	{
+		if (this->ring[idx].nodeAddress == this->memberNode->addr)
+		{
+			myPos = idx;
+			break;
+		}
+	}
+
+	if (myPos == -1)
+	{
+		std::cout << "Error: cannot find self" << std::endl;
+		exit(1);
+	}
+
+	// Now set the 2 predecessors.
+	this->haveReplicasOf = std::vector<Node>();
+	for (int currPos = myPos - 2; currPos < myPos; currPos++)
+	{
+		this->haveReplicasOf.emplace_back(
+			this->ring.at((currPos % this->ring.size())));
+	}
+
+	// Then set the 2 successors.
+	this->hasMyReplicas = std::vector<Node>();
+	for (int currPos = myPos; currPos < myPos + 2; currPos++)
+	{
+		this->hasMyReplicas.emplace_back(
+			this->ring.at(((currPos + 1) % this->ring.size())));
+	}
+
+	return;
 }

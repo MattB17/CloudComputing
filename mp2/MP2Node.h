@@ -163,6 +163,10 @@ private:
 	// quorum was not reached.
 	void removeExpiredTransactions();
 
+  // Initializes the neighbourhood for the node. The neighbourhood consists of
+	// the 2 predecessors and 2 successors of this node on the ring.
+	void initializeNeighbourhood();
+
 public:
 	MP2Node(Member *memberNode, Params *par, EmulNet *emulNet, Log *log, Address *addressOfMember);
 	Member * getMemberNode() {
