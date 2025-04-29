@@ -137,7 +137,13 @@ private:
 	// Object of Log
 	Log * log;
 
+  // Stores replica metadata, that is the replica type for the given key.
+	// This could be extended to hold other metadata in the future.
+	std::unordered_map<std::string, ReplicaType> replicaMetadata;
+
+  // Tracks writes initiated by this node.
 	std::unordered_map<int, WriteTransactionState> pendingWrites;
+	// Tracks reads initiated by this node.
 	std::unordered_map<int, ReadTransactionState> pendingReads;
 
 	void handleCreateMessage(Message& msg);

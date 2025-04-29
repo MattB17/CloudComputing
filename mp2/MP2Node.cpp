@@ -207,9 +207,8 @@ void MP2Node::updateRing()
 	/*
 	 * Step 3: Run the stabilization protocol IF REQUIRED
 	 */
-	// Run stabilization protocol if the hash table size is greater than zero and
-	// if there has been a change in the ring
-	if (change && !this->ht->isEmpty())
+	// Run stabilization protocol if there has been a change in the ring
+	if (change)
 	{
 		this->stabilizationProtocol();
 	}
@@ -420,7 +419,15 @@ void MP2Node::clientDelete(string key){
  * 			   	2) Return true or false based on success or failure
  */
 bool MP2Node::createKeyValue(string key, string value, ReplicaType replica) {
-	return this->ht->create(key, value);
+	bool created = this->ht->create(key, value);
+
+	// If it was successfully created we want to also track its metadata.
+	if (created)
+	{
+		this->replicaMetadata.insert({key, replica});
+	}
+
+	return created;
 }
 
 /**
@@ -444,7 +451,22 @@ string MP2Node::readKey(string key) {
  * 				2) Return true or false based on success or failure
  */
 bool MP2Node::updateKeyValue(string key, string value, ReplicaType replica) {
-	return this->ht->update(key, value);
+	bool updated = this->ht->update(key, value);
+
+  // If it was updated record the replica type.
+	if (updated)
+	{
+		auto metaItr = this->replicaMetadata.find(key);
+		if (metaItr == this->replicaMetadata.end())
+		{
+			std::cout << "Something went wrong, we have no metadata for ";
+			std::cout << key << std::endl;
+			exit(1);
+		}
+		metaItr->second = replica;
+	}
+
+	return updated;
 }
 
 /**
@@ -456,7 +478,14 @@ bool MP2Node::updateKeyValue(string key, string value, ReplicaType replica) {
  * 				2) Return true or false based on success or failure
  */
 bool MP2Node::deletekey(string key) {
-	return this->ht->deleteKey(key);
+	bool deleted = this->ht->deleteKey(key);
+
+	if (deleted)
+	{
+		this->replicaMetadata.erase(key);
+	}
+
+	return deleted;
 }
 
 /**
