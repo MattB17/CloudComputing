@@ -171,6 +171,9 @@ private:
 	// node's position on the ring.
 	void setNeighbourhood(int myPosOnRing);
 
+  // Determines whether the current node is the primary for the key. 
+	bool iAmPrimary(string key, int myIdx);
+
 public:
 	MP2Node(Member *memberNode, Params *par, EmulNet *emulNet, Log *log, Address *addressOfMember);
 	Member * getMemberNode() {

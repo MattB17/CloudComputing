@@ -588,6 +588,41 @@ vector<Node> MP2Node::findNodes(string key) {
 }
 
 /**
+ * FUNCTION NAME：iAmPrimary
+ *
+ * DESCRIPTION: determines whether the current node is the primary replica for
+ *              `key` based on the node's position in the ring `myIdx`.
+ */
+bool MP2Node::iAmPrimary(string key, int myIdx)
+{
+	size_t keyHash = hashFunction(key);
+	size_t myHash = this->ring.at(myIdx).getHashCode();
+	// I'm the first process in the ring.
+	if (myIdx == 0)
+	{
+		// Find the hash code of the last process in the ring
+		size_t endHash = this->ring.at(this->ring().size() - 1).getHashCode();
+		// You're the primary if the keyHash exceeds the last process in the ring
+		// or is less than you're hashcode.
+		if (keyHash <= myHash || keyHash > endHash)
+		{
+			return true;
+		}
+		return false;
+	}
+
+	// Otherwise, there's a node that comes before you in the ring and you're the
+	// primary as long as the key's hash is greater than the hash of your
+	// predecssor and <= your hash.
+	size_t prevHash = this->ring.at(myIdx - 1).getHashCode();
+	if (keyHash > prevHash && keyHash <= myHash)
+	{
+		return true;
+	}
+	return false;
+}
+
+/**
  * FUNCTION NAME: recvLoop
  *
  * DESCRIPTION: Receive messages from EmulNet and push into the queue (mp2q)
