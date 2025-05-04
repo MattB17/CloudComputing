@@ -288,10 +288,7 @@ void MP2Node::clientCreate(string key, string value) {
 		  value,
 		  replicaTypes[rIdx]);
 		// Send the create message to the replica.
-		this->emulNet->ENsend(
-			&(this->memberNode->addr),
-			&(replicas[rIdx].nodeAddress),
-			cMsg.toString());
+		this->sendMsg(&(replicas[rIdx].nodeAddress), cMsg);
 	}
 
   // Keep a record of the pending transaction.
@@ -326,10 +323,7 @@ void MP2Node::clientRead(string key)
 			key);
 
 		// Send the read message to the replica.
-		this->emulNet->ENsend(
-			&(this->memberNode->addr),
-			&(replicas[rIdx].nodeAddress),
-			rMsg.toString());
+		this->sendMsg(&(replicas[rIdx].nodeAddress), rMsg);
 	}
 
 	// Keep a record of the pending read transaction.
@@ -367,10 +361,7 @@ void MP2Node::clientUpdate(string key, string value)
 			replicaTypes[rIdx]);
 
 		// Send the message to the replica
-		this->emulNet->ENsend(
-			&(this->memberNode->addr),
-			&(replicas[rIdx].nodeAddress),
-			rMsg.toString());
+		this->sendMsg(&(replicas[rIdx].nodeAddress), rMsg);
 	}
 
 	// The coordinator will track the pending transaction
@@ -404,10 +395,7 @@ void MP2Node::clientDelete(string key){
 			key);
 
 		// Send the delete message to the replica.
-		this->emulNet->ENsend(
-			&(this->memberNode->addr),
-			&(replicas[rIdx].nodeAddress),
-			dMsg.toString());
+		this->sendMsg(&(replicas[rIdx].nodeAddress), dMsg);
 	}
 
 	// Keep a record of the pending transaction.
@@ -727,6 +715,25 @@ void MP2Node::stabilizationProtocol() {
 				exit(1);
 			}
 
+			// Create the replication messages for the secondary and tertiary. For
+			// now we default them to creates but change them if needed.
+			// Note we use transaction ID -1 to denote this is a re-replication
+			// message and no logging or reply is needed.
+			Message secondaryMsg = Message(
+				-1,
+				this->memberNode->addr,
+				MessageType::CREATE,
+				repItr->first,
+				v,
+				ReplicaType::SECONDARY);
+			Message tertiaryMsg = Message(
+				-1,
+				this->memberNode->addr,
+				MessageType::CREATE,
+				repItr->first,
+				v,
+				ReplicaType::TERTIARY);
+
 			// Now we use the previous ReplicaType to decide how to replicate the
 			// keys.
 			// For now we will assume there are only failures and no rejoins / new
@@ -736,72 +743,28 @@ void MP2Node::stabilizationProtocol() {
 			// predecessors have failed, so issue 2 creates to my new neighbours.
 			if (oldType == ReplicaType::TERTIARY)
 			{
-				// create for secondary
-				Message createMsg = Message(
-					-1,
-					this->memberNode->addr,
-					MessageType::CREATE,
-					repItr->first,
-					v,
-					ReplicaType::SECONDARY);
-				this->emulNet->ENsend(
-					&(this->memberNode->addr),
-					&(this->hasMyReplicas[0].nodeAddress),
-					createMsg.toString());
-
-				// And for tertiary
-				createMsg.replica = ReplicaType::TERTIARY;
-				this->emulNet->ENsend(
-					&(this->memberNode->addr),
-					&(this->hasMyReplicas[1].nodeAddress),
-					createMsg.toString());
+				this->sendMsg(&(this->hasMyReplicas[0].nodeAddress), secondaryMsg);
+				this->sendMsg(&(this->hasMyReplicas[1].nodeAddress), tertiaryMsg);
 			}
 			else if (oldType == ReplicaType::SECONDARY)
 			{
 				// So this node was secondary but is now primary meaning its
 				// predecessor failed.
-				Message secondaryMsg = Message(
-					-1,
-					this->memberNode->addr,
-					MessageType::UPDATE,
-					repItr->first,
-					v,
-					ReplicaType::SECONDARY);
 				if (this->hasMyReplicas[0].nodeAddress ==
 					  oldHasMyReplicas[0].nodeAddress)
 				{
 					// If its first successor hasn't changed then it was a TERTIARY but is
 					// now a SECONDARY.
-					this->emulNet->ENsend(
-						&(this->memberNode->addr),
-						&(this->hasMyReplicas[0].nodeAddress),
-						secondaryMsg.toString());
+					secondaryMsg.type = MessageType::UPDATE;
 				}
-				else
-				{
-					// Otherwise, the original TERTIARY also failed so just issue a
-					// create for the now SECONDARY node.
-					secondaryMsg.type = MessageType::CREATE;
-					this->emulNet->ENsend(
-						&(this->memberNode->addr),
-						&(this->hasMyReplicas[0].nodeAddress),
-						secondaryMsg.toString());
-				}
+				// Otherwise, the original TERTIARY also failed so just issue a
+				// create for the now SECONDARY node (ie. don't change the MessageType).
+				this->sendMsg(&(this->hasMyReplicas[0].nodeAddress), secondaryMsg);
 
 				// And as we are assuming no rejoins / new nodes, the now 2nd successor
 				// of this node has never seen the key (as this node was SECONDARY but
 			  // is now PRIMARY). So we just create the third replica.
-				Message createMsg = Message(
-					-1,
-					this->memberNode->addr,
-					MessageType::CREATE,
-					repItr->first,
-					v,
-					ReplicaType::TERTIARY);
-				this->emulNet->ENsend(
-					&(this->memberNode->addr),
-					&(this->hasMyReplicas[0].nodeAddress),
-					createMsg.toString());
+				this->sendMsg(&(this->hasMyReplicas[1].nodeAddress), tertiaryMsg);
 			}
 			else
 			{
@@ -813,30 +776,10 @@ void MP2Node::stabilizationProtocol() {
 					  oldHasMyReplicas[1].nodeAddress)
 				{
 					// So update the successor to now have the SECONDARY.
-					Message secondaryMsg = Message(
-						-1,
-						this->memberNode->addr,
-						MessageType::UPDATE,
-						repItr->first,
-						v,
-						ReplicaType::SECONDARY);
-					this->emulNet->ENsend(
-						&(this->memberNode->addr),
-						&(this->hasMyReplicas[0].nodeAddress),
-						secondaryMsg.toString());
-
+					secondaryMsg.type = MessageType::UPDATE;
+					this->sendMsg(&(this->hasMyReplicas[0].nodeAddress), secondaryMsg);
 					// And my now second successor has not seen the key before.
-					Message tertiaryMsg = Message(
-						-1,
-						this->memberNode->addr,
-						MessageType::CREATE,
-						repItr->first,
-						v,
-						ReplicaType::TERTIARY);
-					this->emulNet->ENsend(
-						&(this->memberNode->addr),
-						&(this->hasMyReplicas[1].nodeAddress),
-						tertiaryMsg.toString());
+					this->sendMsg(&(this->hasMyReplicas[1].nodeAddress), tertiaryMsg);
 				}
 				// 2. My successor has not changed meaning it has my secondary.
 				else if (this->hasMyReplicas[0].nodeAddress ==
@@ -847,17 +790,7 @@ void MP2Node::stabilizationProtocol() {
 					if (!(this->hasMyReplicas[1].nodeAddress ==
 						    oldHasMyReplicas[1].nodeAddress))
 					{
-						Message tertiaryMsg = Message(
-							-1,
-							this->memberNode->addr,
-							MessageType::CREATE,
-							repItr->first,
-							v,
-							ReplicaType::TERTIARY);
-						this->emulNet->ENsend(
-							&(this->memberNode->addr),
-							&(this->hasMyReplicas[1].nodeAddress),
-							tertiaryMsg.toString());
+						this->sendMsg(&(this->hasMyReplicas[1].nodeAddress), tertiaryMsg);
 					}
 					// Otherwise, both are intact so do nothing.
 				}
@@ -865,29 +798,8 @@ void MP2Node::stabilizationProtocol() {
 				// successor, meaning both failed. So create both messages.
 				else
 				{
-					Message secondaryMsg = Message(
-						-1,
-						this->memberNode->addr,
-						MessageType::CREATE,
-						repItr->first,
-						v,
-						ReplicaType::SECONDARY);
-					this->emulNet->ENsend(
-						&(this->memberNode->addr),
-						&(this->hasMyReplicas[0].nodeAddress),
-						secondaryMsg.toString());
-
-					Message tertiaryMsg = Message(
-						-1,
-						this->memberNode->addr,
-						MessageType::CREATE,
-						repItr->first,
-						v,
-						ReplicaType::TERTIARY);
-					this->emulNet->ENsend(
-						&(this->memberNode->addr),
-						&(this->hasMyReplicas[1].nodeAddress),
-						tertiaryMsg.toString());	
+					this->sendMsg(&(this->hasMyReplicas[0].nodeAddress), secondaryMsg);
+					this->sendMsg(&(this->hasMyReplicas[1].nodeAddress), tertiaryMsg);
 				}
 			}
 		}
@@ -974,10 +886,7 @@ void MP2Node::handleReadMessage(Message& msg)
 		msg.transID,
 		this->memberNode->addr,
 		val);
-	this->emulNet->ENsend(
-		&(this->memberNode->addr),
-		&(msg.fromAddr),
-		replyMsg.toString());
+	this->sendMsg(&(msg.fromAddr), replyMsg);
 }
 
 /**
@@ -1290,10 +1199,7 @@ void MP2Node::sendReplyToCoordinator(Message& coordMsg, bool operationSucceeded)
 		operationSucceeded);
 
 	// Send the reply to the coordinator
-	this->emulNet->ENsend(
-		&(this->memberNode->addr),
-		&(coordMsg.fromAddr),
-		replyMsg.toString());
+	this->sendMsg(&(coordMsg.fromAddr), replyMsg);
 }
 
 /**
@@ -1444,4 +1350,18 @@ void MP2Node::setNeighbourhood(int myPosOnRing)
 	}
 
 	return;
+}
+
+/**
+ * FUNCTION NAME: sendMsg
+ *
+ * DESCRIPTION: a helper message for sending a message `msg` over the network
+ *              from this node to the node with address `toAddr`.
+ */
+void MP2Node::sendMsg(Address *toAddr, Message& msg)
+{
+	this->emulNet->ENsend(
+		&(this->memberNode->addr),
+		toAddr,
+		msg.toString());
 }
