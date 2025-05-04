@@ -601,7 +601,7 @@ bool MP2Node::iAmPrimary(string key, int myIdx)
 	if (myIdx == 0)
 	{
 		// Find the hash code of the last process in the ring
-		size_t endHash = this->ring.at(this->ring().size() - 1).getHashCode();
+		size_t endHash = this->ring.at(this->ring.size() - 1).getHashCode();
 		// You're the primary if the keyHash exceeds the last process in the ring
 		// or is less than you're hashcode.
 		if (keyHash <= myHash || keyHash > endHash)
@@ -693,12 +693,205 @@ void MP2Node::stabilizationProtocol() {
 		}
 	}
 
+	if (myPos < 0)
+	{
+		std::cout << "Cannot find self!" << std::endl;
+		exit(1);
+	}
+
   // Copy old values as these will be needed for replica management.
 	std::vector<Node> oldHaveReplicasOf = this->haveReplicasOf;
 	std::vector<Node> oldHasMyReplicas = this->hasMyReplicas;
 
   // Update successors and predecessors.
 	this->setNeighbourhood(myPos);
+
+	// Now we loop through our keys and see which one's we are primary for.
+	// For any key for which we are primary we handle the re-replication of keys
+	// (if necessary). If we are not primary then some other process is primary
+	// and will handle the replication.
+	for (auto repItr = this->replicaMetadata.begin();
+       repItr != this->replicaMetadata.end();
+		   repItr++)
+	{
+		if (this->iAmPrimary(repItr->first, myPos))
+		{
+			// Start by retrieving the value and updating the replica metadata to
+			// show you are primary.
+			ReplicaType oldType = repItr->second;
+			repItr->second = ReplicaType::PRIMARY;
+			std::string v = this->ht->read(repItr->first);
+			if (v.compare("") == 0)
+			{
+				std::cout << "Cannot find value for " << repItr->first << std::endl;
+				exit(1);
+			}
+
+			// Now we use the previous ReplicaType to decide how to replicate the
+			// keys.
+			// For now we will assume there are only failures and no rejoins / new
+			// nodes joining.
+
+			// If I used to be tertiary but am now primary it means my two
+			// predecessors have failed, so issue 2 creates to my new neighbours.
+			if (oldType == ReplicaType::TERTIARY)
+			{
+				// create for secondary
+				Message createMsg = Message(
+					-1,
+					this->memberNode->addr,
+					MessageType::CREATE,
+					repItr->first,
+					v,
+					ReplicaType::SECONDARY);
+				this->emulNet->ENsend(
+					&(this->memberNode->addr),
+					&(this->hasMyReplicas[0].nodeAddress),
+					createMsg.toString());
+
+				// And for tertiary
+				createMsg.replica = ReplicaType::TERTIARY;
+				this->emulNet->ENsend(
+					&(this->memberNode->addr),
+					&(this->hasMyReplicas[1].nodeAddress),
+					createMsg.toString());
+			}
+			else if (oldType == ReplicaType::SECONDARY)
+			{
+				// So this node was secondary but is now primary meaning its
+				// predecessor failed.
+				Message secondaryMsg = Message(
+					-1,
+					this->memberNode->addr,
+					MessageType::UPDATE,
+					repItr->first,
+					v,
+					ReplicaType::SECONDARY);
+				if (this->hasMyReplicas[0].nodeAddress ==
+					  oldHasMyReplicas[0].nodeAddress)
+				{
+					// If its first successor hasn't changed then it was a TERTIARY but is
+					// now a SECONDARY.
+					this->emulNet->ENsend(
+						&(this->memberNode->addr),
+						&(this->hasMyReplicas[0].nodeAddress),
+						secondaryMsg.toString());
+				}
+				else
+				{
+					// Otherwise, the original TERTIARY also failed so just issue a
+					// create for the now SECONDARY node.
+					secondaryMsg.type = MessageType::CREATE;
+					this->emulNet->ENsend(
+						&(this->memberNode->addr),
+						&(this->hasMyReplicas[0].nodeAddress),
+						secondaryMsg.toString());
+				}
+
+				// And as we are assuming no rejoins / new nodes, the now 2nd successor
+				// of this node has never seen the key (as this node was SECONDARY but
+			  // is now PRIMARY). So we just create the third replica.
+				Message createMsg = Message(
+					-1,
+					this->memberNode->addr,
+					MessageType::CREATE,
+					repItr->first,
+					v,
+					ReplicaType::TERTIARY);
+				this->emulNet->ENsend(
+					&(this->memberNode->addr),
+					&(this->hasMyReplicas[0].nodeAddress),
+					createMsg.toString());
+			}
+			else
+			{
+				// This node was already the PRIMARY, so we just need to check if
+				// either its SECONDARY or TERTIARY failed.
+				// So there are 3 cases:
+				// 1. My SECONDARY failed and my old TERTIARY is now my SECONDARY.
+				if (this->hasMyReplicas[0].nodeAddress ==
+					  oldHasMyReplicas[1].nodeAddress)
+				{
+					// So update the successor to now have the SECONDARY.
+					Message secondaryMsg = Message(
+						-1,
+						this->memberNode->addr,
+						MessageType::UPDATE,
+						repItr->first,
+						v,
+						ReplicaType::SECONDARY);
+					this->emulNet->ENsend(
+						&(this->memberNode->addr),
+						&(this->hasMyReplicas[0].nodeAddress),
+						secondaryMsg.toString());
+
+					// And my now second successor has not seen the key before.
+					Message tertiaryMsg = Message(
+						-1,
+						this->memberNode->addr,
+						MessageType::CREATE,
+						repItr->first,
+						v,
+						ReplicaType::TERTIARY);
+					this->emulNet->ENsend(
+						&(this->memberNode->addr),
+						&(this->hasMyReplicas[1].nodeAddress),
+						tertiaryMsg.toString());
+				}
+				// 2. My successor has not changed meaning it has my secondary.
+				else if (this->hasMyReplicas[0].nodeAddress ==
+					       oldHasMyReplicas[0].nodeAddress)
+				{
+					// If my old second successor failed I need to create the key at my
+					// current second successor.
+					if (!(this->hasMyReplicas[1].nodeAddress ==
+						    oldHasMyReplicas[1].nodeAddress))
+					{
+						Message tertiaryMsg = Message(
+							-1,
+							this->memberNode->addr,
+							MessageType::CREATE,
+							repItr->first,
+							v,
+							ReplicaType::TERTIARY);
+						this->emulNet->ENsend(
+							&(this->memberNode->addr),
+							&(this->hasMyReplicas[1].nodeAddress),
+							tertiaryMsg.toString());
+					}
+					// Otherwise, both are intact so do nothing.
+				}
+				// 3. My now successor is neither my old successor nor old secondary
+				// successor, meaning both failed. So create both messages.
+				else
+				{
+					Message secondaryMsg = Message(
+						-1,
+						this->memberNode->addr,
+						MessageType::CREATE,
+						repItr->first,
+						v,
+						ReplicaType::SECONDARY);
+					this->emulNet->ENsend(
+						&(this->memberNode->addr),
+						&(this->hasMyReplicas[0].nodeAddress),
+						secondaryMsg.toString());
+
+					Message tertiaryMsg = Message(
+						-1,
+						this->memberNode->addr,
+						MessageType::CREATE,
+						repItr->first,
+						v,
+						ReplicaType::TERTIARY);
+					this->emulNet->ENsend(
+						&(this->memberNode->addr),
+						&(this->hasMyReplicas[1].nodeAddress),
+						tertiaryMsg.toString());	
+				}
+			}
+		}
+	}
 }
 
 /**
