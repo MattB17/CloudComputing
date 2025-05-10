@@ -133,12 +133,15 @@ bool ReadTransactionState::allRepliesReceived()
 /**
  * constructor
  */
-MP2Node::MP2Node(Member *memberNode, Params *par, EmulNet * emulNet, Log * log, Address * address) {
+MP2Node::MP2Node(Member *memberNode,
+	               const Params &par,
+								 EmulNet * emulNet,
+								 Log * log,
+								 Address * address): par(par) {
 	this->memberNode = memberNode;
-	this->par = par;
 	this->emulNet = emulNet;
 	this->log = log;
-	ht = new HashTable();
+	ht = std::make_unique<HashTable>();
 	this->memberNode->addr = *address;
 }
 
@@ -146,7 +149,6 @@ MP2Node::MP2Node(Member *memberNode, Params *par, EmulNet * emulNet, Log * log, 
  * Destructor
  */
 MP2Node::~MP2Node() {
-	delete ht;
 	delete memberNode;
 }
 
@@ -293,7 +295,7 @@ void MP2Node::clientCreate(string key, string value) {
 
   // Keep a record of the pending transaction.
 	this->pendingWrites.insert({currTransId, WriteTransactionState(
-		key, value, TransactionType::T_CREATE, this->par->getcurrtime())});
+		key, value, TransactionType::T_CREATE, this->par.getcurrtime())});
 }
 
 /**
@@ -328,7 +330,7 @@ void MP2Node::clientRead(string key)
 
 	// Keep a record of the pending read transaction.
 	this->pendingReads.insert(
-		{currTransId, ReadTransactionState(key, this->par->getcurrtime())});
+		{currTransId, ReadTransactionState(key, this->par.getcurrtime())});
 }
 
 /**
@@ -366,7 +368,7 @@ void MP2Node::clientUpdate(string key, string value)
 
 	// The coordinator will track the pending transaction
 	this->pendingWrites.insert({currTransId, WriteTransactionState(
-		key, value, TransactionType::T_UPDATE, this->par->getcurrtime())});
+		key, value, TransactionType::T_UPDATE, this->par.getcurrtime())});
 }
 
 /**
@@ -401,7 +403,7 @@ void MP2Node::clientDelete(string key){
 	// Keep a record of the pending transaction.
 	// We use the WriteTransactionState constructor for delete states.
 	this->pendingWrites.insert(
-		{currTransId, WriteTransactionState(key, this->par->getcurrtime())});
+		{currTransId, WriteTransactionState(key, this->par.getcurrtime())});
 }
 
 /**
@@ -1212,7 +1214,7 @@ void MP2Node::sendReplyToCoordinator(Message& coordMsg, bool operationSucceeded)
  */
 void MP2Node::removeExpiredTransactions()
 {
-	int currTime = par->getcurrtime();
+	int currTime = par.getcurrtime();
 
 	std::unordered_map<int, ReadTransactionState> pendingReads;
 	// Start with the read transactions.

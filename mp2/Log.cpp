@@ -9,8 +9,8 @@
 /**
  * Constructor
  */
-Log::Log(Params *p) {
-	par = p;
+Log::Log(std::shared_ptr<Params> p) {
+	par = std::move(p);
 	firstTime = false;
 }
 
@@ -50,7 +50,7 @@ void Log::LOG(Address *addr, const char * str, ...) {
 	static int numwrites;
 	static char stdstring[30];
 	static char stdstring2[40];
-	static char stdstring3[40]; 
+	static char stdstring3[40];
 	static int dbg_opened=0;
 
 	if(dbg_opened != 639){
@@ -68,7 +68,7 @@ void Log::LOG(Address *addr, const char * str, ...) {
 
 		dbg_opened=639;
 	}
-	else 
+	else
 
 	sprintf(stdstring, "%d.%d.%d.%d:%d ", addr->addr[0], addr->addr[1], addr->addr[2], addr->addr[3], *(short *)&addr->addr[4]);
 

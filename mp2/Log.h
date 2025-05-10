@@ -27,10 +27,10 @@
  */
 class Log{
 private:
-	Params *par;
+	std::shared_ptr<Params> par;
 	bool firstTime;
 public:
-	Log(Params *p);
+	Log(std::shared_ptr<Params> p);
 	Log(const Log &anotherLog);
 	Log& operator = (const Log &anotherLog);
 	virtual ~Log();

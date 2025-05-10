@@ -127,13 +127,13 @@ private:
 	// Ring
 	vector<Node> ring;
 	// Hash Table
-	HashTable * ht;
+	std::unique_ptr<HashTable> ht;
 	// Member representing this member
 	Member *memberNode;
 	// Params object
-	Params *par;
+	const Params &par;
 	// Object of EmulNet
-	EmulNet * emulNet;
+	EmulNet *emulNet;
 	// Object of Log
 	Log * log;
 
@@ -178,7 +178,7 @@ private:
 	void sendMsg(Address *toAddr, Message& msg);
 
 public:
-	MP2Node(Member *memberNode, Params *par, EmulNet *emulNet, Log *log, Address *addressOfMember);
+	MP2Node(Member *memberNode, const Params &par, EmulNet *emulNet, Log *log, Address *addressOfMember);
 	Member * getMemberNode() {
 		return this->memberNode;
 	}

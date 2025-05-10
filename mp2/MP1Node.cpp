@@ -151,14 +151,17 @@ short AddressHandler::portFromAddress(Address *addr)
  * You can add new members to the class if you think it
  * is necessary for your logic to work
  */
-MP1Node::MP1Node(Member *member, Params *params, EmulNet *emul, Log *log, Address *address) {
+MP1Node::MP1Node(Member *member,
+	               const Params &params,
+								 EmulNet *emul,
+								 Log *log,
+								 Address *address): par(params) {
 	for( int i = 0; i < 6; i++ ) {
 		NULLADDR[i] = 0;
 	}
 	this->memberNode = member;
 	this->emulNet = emul;
 	this->log = log;
-	this->par = params;
 	this->memberNode->addr = *address;
 	this->addressHandler = new AddressHandler();
 	this->gossipProp = 0.5;
@@ -280,7 +283,6 @@ int MP1Node::finishUpThisNode(){
 	 this->emulNet->ENcleanup();
 	 this->emulNet = nullptr;
 	 this->log = nullptr;
-	 this->par = nullptr;
 	 delete this->addressHandler;
 
 	 return 0;
@@ -480,7 +482,7 @@ void MP1Node::addMembershipEntry(Address* newAddr, long newHeartbeat)
 	int id = addressHandler->idFromAddress(newAddr);
 	short port = addressHandler->portFromAddress(newAddr);
 	MemberListEntry mle = MemberListEntry(
-		id, port, newHeartbeat, par->getcurrtime());
+		id, port, newHeartbeat, par.getcurrtime());
 
 	memTableIdx[newAddrStr] = memberNode->memberList.size();
 	memberNode->memberList.push_back(mle);
@@ -535,7 +537,7 @@ void MP1Node::cleanMemberList() {
 			&entryAddr, mle->getid(), mle->getport());
 		std::string entryAddrStr(entryAddr.addr);
 
-		if (par->getcurrtime() - mle->gettimestamp() <= TCLEANUP ||
+		if (par.getcurrtime() - mle->gettimestamp() <= TCLEANUP ||
 	      entryAddr == memberNode->addr)
 		{
 			memTableIdx[entryAddrStr] = cleanedMemberList.size();
@@ -564,7 +566,7 @@ std::vector<MemberListEntry> MP1Node::getActiveNodes() {
 			 itr != memberNode->memberList.end();
 			 itr++)
 	{
-		if ((par->getcurrtime() - itr->gettimestamp()) <= TFAIL) {
+		if ((par.getcurrtime() - itr->gettimestamp()) <= TFAIL) {
 			activeNodes.push_back(*itr);
 		}
 	}
@@ -632,13 +634,13 @@ void MP1Node::handleGossipMessage(char* gossipData,
 		{
 			MemberListEntry* currMle = &memberNode->memberList[currAddrIdx->second];
 			bool isActive = (
-				(par->getcurrtime() - currMle->gettimestamp()) <= TFAIL ||
+				(par.getcurrtime() - currMle->gettimestamp()) <= TFAIL ||
 			  currAddress == *senderAddr);
 			if (isActive && currHeartbeat > currMle->getheartbeat())
 			{
 				logEvent("Updating heartbeat for %d.%d.%d.%d:%d", &currAddress);
 				memberNode->memberList[currAddrIdx->second] = MemberListEntry(
-					currId, currPort, currHeartbeat, par->getcurrtime());
+					currId, currPort, currHeartbeat, par.getcurrtime());
 			}
 		}
 	}
@@ -678,5 +680,5 @@ void MP1Node::incrementHeartbeat()
 		exit(1);
 	}
 	memberNode->memberList[itr->second].setheartbeat(memberNode->heartbeat);
-	memberNode->memberList[itr->second].settimestamp(par->getcurrtime());
+	memberNode->memberList[itr->second].settimestamp(par.getcurrtime());
 }

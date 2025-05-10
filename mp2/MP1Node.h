@@ -112,7 +112,7 @@ class MP1Node {
 private:
 	EmulNet *emulNet;
 	Log *log;
-	Params *par;
+	const Params &par;
 	Member *memberNode;
 	char NULLADDR[6];
   AddressHandler *addressHandler;
@@ -134,7 +134,7 @@ private:
   void incrementHeartbeat();
 
 public:
-	MP1Node(Member *, Params *, EmulNet *, Log *, Address *);
+	MP1Node(Member *, const Params &, EmulNet *, Log *, Address *);
 	Member * getMemberNode() {
 		return memberNode;
 	}

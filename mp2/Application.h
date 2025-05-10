@@ -53,10 +53,10 @@ private:
 	char JOINADDR[30];
 	EmulNet *en;
 	EmulNet *en1;
-    Log *log;
+  Log *log;
 	MP1Node **mp1;
 	MP2Node **mp2;
-	Params *par;
+	std::shared_ptr<Params> par;
 	map<string, string> testKVPairs;
 public:
 	Application(char *);

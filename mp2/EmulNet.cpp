@@ -9,11 +9,11 @@
 /**
  * Constructor
  */
-EmulNet::EmulNet(Params *p)
+EmulNet::EmulNet(std::shared_ptr<Params> p)
 {
 	//trace.funcEntry("EmulNet::EmulNet");
 	int i,j;
-	par = p;
+	par = std::move(p);
 	emulnet.setNextId(1);
 	emulnet.settCurrBuffSize(0);
 	enInited=0;

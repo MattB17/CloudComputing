@@ -34,7 +34,7 @@ public:
 	int CRUDTEST;
 	Params();
 	void setparams(char *);
-	int getcurrtime();
+	int getcurrtime() const;
 };
 
 #endif /* _PARAMS_H_ */

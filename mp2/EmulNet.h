@@ -77,15 +77,15 @@ public:
  * DESCRIPTION: This class defines an emulated network
  */
 class EmulNet
-{ 	
+{
 private:
-	Params* par;
+	std::shared_ptr<Params> par;
 	int sent_msgs[MAX_NODES + 1][MAX_TIME];
 	int recv_msgs[MAX_NODES + 1][MAX_TIME];
 	int enInited;
 	EM emulnet;
 public:
- 	EmulNet(Params *p);
+ 	EmulNet(std::shared_ptr<Params> p);
  	EmulNet(EmulNet &anotherEmulNet);
  	EmulNet& operator = (EmulNet &anotherEmulNet);
  	virtual ~EmulNet();

@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
  */
 Application::Application(char *infile) {
 	int i;
-	par = new Params();
+	par = std::make_shared<Params>();
 	srand (time(NULL));
 	par->setparams(infile);
 	log = new Log(par);
@@ -67,8 +67,8 @@ Application::Application(char *infile) {
 		Address joinaddr;
 		joinaddr = getjoinaddr();
 		addressOfMemberNode = (Address *) en->ENinit(addressOfMemberNode, par->PORTNUM);
-		mp1[i] = new MP1Node(memberNode, par, en, log, addressOfMemberNode);
-		mp2[i] = new MP2Node(memberNode, par, en1, log, addressOfMemberNode);
+		mp1[i] = new MP1Node(memberNode, *par, en, log, addressOfMemberNode);
+		mp2[i] = new MP2Node(memberNode, *par, en1, log, addressOfMemberNode);
 		log->LOG(&(mp1[i]->getMemberNode()->addr), "APP");
 		log->LOG(&(mp2[i]->getMemberNode()->addr), "APP MP2");
 		delete addressOfMemberNode;
@@ -88,7 +88,6 @@ Application::~Application() {
 	}
 	free(mp1);
 	free(mp2);
-	delete par;
 }
 
 /**
