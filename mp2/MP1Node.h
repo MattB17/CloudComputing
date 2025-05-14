@@ -110,8 +110,8 @@ public:
  */
 class MP1Node {
 private:
-	EmulNet *emulNet;
-	Log *log;
+	std::shared_ptr<EmulNet> emulNet;
+	std::shared_ptr<Log> log;
 	const Params &par;
 	Member *memberNode;
 	char NULLADDR[6];
@@ -134,7 +134,9 @@ private:
   void incrementHeartbeat();
 
 public:
-	MP1Node(Member *, const Params &, EmulNet *, Log *, Address *);
+	MP1Node(
+    Member *, const Params &, std::shared_ptr<EmulNet>,
+    std::shared_ptr<Log>, Address *);
 	Member * getMemberNode() {
 		return memberNode;
 	}

@@ -153,8 +153,8 @@ short AddressHandler::portFromAddress(Address *addr)
  */
 MP1Node::MP1Node(Member *member,
 	               const Params &params,
-								 EmulNet *emul,
-								 Log *log,
+								 std::shared_ptr<EmulNet> emul,
+								 std::shared_ptr<Log> log,
 								 Address *address): par(params) {
 	for( int i = 0; i < 6; i++ ) {
 		NULLADDR[i] = 0;
@@ -282,7 +282,6 @@ int MP1Node::finishUpThisNode(){
    this->memberNode = nullptr;
 	 this->emulNet->ENcleanup();
 	 this->emulNet = nullptr;
-	 this->log = nullptr;
 	 delete this->addressHandler;
 
 	 return 0;

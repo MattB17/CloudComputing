@@ -49,9 +49,9 @@ Application::Application(char *infile) {
 	par = std::make_shared<Params>();
 	srand (time(NULL));
 	par->setparams(infile);
-	log = new Log(par);
-	en = new EmulNet(par);
-	en1 = new EmulNet(par);
+	log = std::make_shared<Log>(par);
+	en = std::make_shared<EmulNet>(par);
+	en1 = std::make_shared<EmulNet>(par);
 	// An array of MP1Nodes with EN_GPSZ elements
 	mp1 = (MP1Node **) malloc(par->EN_GPSZ * sizeof(MP1Node *));
 	// An array of MP2Nodes with EN_GPSZ elements
@@ -79,9 +79,6 @@ Application::Application(char *infile) {
  * Destructor
  */
 Application::~Application() {
-	delete log;
-	delete en;
-	delete en1;
 	for ( int i = 0; i < par->EN_GPSZ; i++ ) {
 		delete mp1[i];
 		delete mp2[i];

@@ -51,9 +51,9 @@ private:
 	// Address for introduction to the group
 	// Coordinator Node
 	char JOINADDR[30];
-	EmulNet *en;
-	EmulNet *en1;
-  Log *log;
+	std::shared_ptr<EmulNet> en;
+	std::shared_ptr<EmulNet> en1;
+  std::shared_ptr<Log> log;
 	MP1Node **mp1;
 	MP2Node **mp2;
 	std::shared_ptr<Params> par;

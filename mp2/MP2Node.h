@@ -133,9 +133,9 @@ private:
 	// Params object
 	const Params &par;
 	// Object of EmulNet
-	EmulNet *emulNet;
+	std::shared_ptr<EmulNet> emulNet;
 	// Object of Log
-	Log * log;
+	std::shared_ptr<Log> log;
 
   // Stores replica metadata, that is the replica type for the given key.
 	// This could be extended to hold other metadata in the future.
@@ -178,7 +178,9 @@ private:
 	void sendMsg(Address *toAddr, Message& msg);
 
 public:
-	MP2Node(Member *memberNode, const Params &par, EmulNet *emulNet, Log *log, Address *addressOfMember);
+	MP2Node(
+		Member *memberNode, const Params &par, std::shared_ptr<EmulNet> emulNet,
+		std::shared_ptr<Log> log, Address *addressOfMember);
 	Member * getMemberNode() {
 		return this->memberNode;
 	}
