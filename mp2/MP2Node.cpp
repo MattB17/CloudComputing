@@ -133,7 +133,7 @@ bool ReadTransactionState::allRepliesReceived()
 /**
  * constructor
  */
-MP2Node::MP2Node(Member *memberNode,
+MP2Node::MP2Node(std::shared_ptr<Member> memberNode,
 	               const Params &par,
 								 std::shared_ptr<EmulNet> emulNet,
 								 std::shared_ptr<Log> log,
@@ -148,9 +148,7 @@ MP2Node::MP2Node(Member *memberNode,
 /**
  * Destructor
  */
-MP2Node::~MP2Node() {
-	delete memberNode;
-}
+MP2Node::~MP2Node() {}
 
 /**
  * FUNCTION NAME: updateRing

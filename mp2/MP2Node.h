@@ -129,7 +129,7 @@ private:
 	// Hash Table
 	std::unique_ptr<HashTable> ht;
 	// Member representing this member
-	Member *memberNode;
+	std::shared_ptr<Member> memberNode;
 	// Params object
 	const Params &par;
 	// Object of EmulNet
@@ -179,9 +179,10 @@ private:
 
 public:
 	MP2Node(
-		Member *memberNode, const Params &par, std::shared_ptr<EmulNet> emulNet,
-		std::shared_ptr<Log> log, Address *addressOfMember);
-	Member * getMemberNode() {
+		std::shared_ptr<Member> memberNode, const Params &par,
+		std::shared_ptr<EmulNet> emulNet, std::shared_ptr<Log> log,
+		Address *addressOfMember);
+	std::shared_ptr<Member> getMemberNode() {
 		return this->memberNode;
 	}
 

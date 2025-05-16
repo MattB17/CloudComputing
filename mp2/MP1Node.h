@@ -113,7 +113,7 @@ private:
 	std::shared_ptr<EmulNet> emulNet;
 	std::shared_ptr<Log> log;
 	const Params &par;
-	Member *memberNode;
+	std::shared_ptr<Member> memberNode;
 	char NULLADDR[6];
   AddressHandler *addressHandler;
   double gossipProp;
@@ -135,9 +135,10 @@ private:
 
 public:
 	MP1Node(
-    Member *, const Params &, std::shared_ptr<EmulNet>,
+    std::shared_ptr<Member>, const Params &, std::shared_ptr<EmulNet>,
     std::shared_ptr<Log>, Address *);
-	Member * getMemberNode() {
+
+	std::shared_ptr<Member> getMemberNode() {
 		return memberNode;
 	}
 	int recvLoop();
@@ -148,11 +149,11 @@ public:
 	int finishUpThisNode();
 	void nodeLoop();
 	void checkMessages();
-	bool recvCallBack(void *env, char *data, int size);
+	bool recvCallBack(char *data, int size);
 	void nodeLoopOps();
 	int isNullAddress(Address *addr);
 	Address getJoinAddress();
-	void initMemberListTable(Member *memberNode);
+	void initMemberListTable();
 	void printAddress(Address *addr);
 	virtual ~MP1Node();
 };

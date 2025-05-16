@@ -61,7 +61,7 @@ Application::Application(char *infile) {
 	 * Init all nodes
 	 */
 	for( i = 0; i < par->EN_GPSZ; i++ ) {
-		Member *memberNode = new Member;
+		std::shared_ptr<Member> memberNode = std::make_shared<Member>();
 		memberNode->inited = false;
 		Address *addressOfMemberNode = new Address();
 		Address joinaddr;

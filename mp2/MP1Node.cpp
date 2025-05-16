@@ -151,7 +151,7 @@ short AddressHandler::portFromAddress(Address *addr)
  * You can add new members to the class if you think it
  * is necessary for your logic to work
  */
-MP1Node::MP1Node(Member *member,
+MP1Node::MP1Node(std::shared_ptr<Member> member,
 	               const Params &params,
 								 std::shared_ptr<EmulNet> emul,
 								 std::shared_ptr<Log> log,
@@ -239,7 +239,7 @@ int MP1Node::initThisNode(Address *joinaddr) {
 	memberNode->heartbeat = 0;
 	memberNode->pingCounter = TGOSSIP;
 	memberNode->timeOutCounter = -1;
-  initMemberListTable(memberNode);
+  initMemberListTable();
 
   return 0;
 }
@@ -250,8 +250,6 @@ int MP1Node::initThisNode(Address *joinaddr) {
  * DESCRIPTION: Join the distributed system
  */
 int MP1Node::introduceSelfToGroup(Address *joinaddr) {
-	MessageHdr *msg;
-
   if ( 0 == memcmp((char *)&(memberNode->addr.addr), (char *)&(joinaddr->addr), sizeof(memberNode->addr.addr))) {
     // I am the group booter (first process to join the group). Boot up the group
 		logMsg("Starting up group...");
@@ -326,7 +324,7 @@ void MP1Node::checkMessages() {
     	ptr = memberNode->mp1q.front().elt;
     	size = memberNode->mp1q.front().size;
     	memberNode->mp1q.pop();
-    	recvCallBack((void *)memberNode, (char *)ptr, size);
+    	recvCallBack((char *)ptr, size);
     }
     return;
 }
@@ -336,7 +334,7 @@ void MP1Node::checkMessages() {
  *
  * DESCRIPTION: Message handler for different message types
  */
-bool MP1Node::recvCallBack(void *env, char *data, int size ) {
+bool MP1Node::recvCallBack(char *data, int size ) {
   // Extract the message header and the address of the sender.
 	MessageHdr *msgHeader = (MessageHdr *)(data);
 	Address *senderAddr = (Address *)(data + sizeof(MessageHdr));
@@ -453,7 +451,7 @@ Address MP1Node::getJoinAddress() {
  *
  * DESCRIPTION: Initialize the membership list
  */
-void MP1Node::initMemberListTable(Member *memberNode) {
+void MP1Node::initMemberListTable() {
 	memberNode->memberList.clear();
 	// Add self to the table
 	addMembershipEntry(&memberNode->addr, memberNode->heartbeat);
