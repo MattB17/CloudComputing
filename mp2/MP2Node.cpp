@@ -137,12 +137,12 @@ MP2Node::MP2Node(std::shared_ptr<Member> memberNode,
 	               const Params &par,
 								 std::shared_ptr<EmulNet> emulNet,
 								 std::shared_ptr<Log> log,
-								 Address * address): par(par) {
+								 Address address): par(par) {
 	this->memberNode = memberNode;
 	this->emulNet = emulNet;
 	this->log = log;
 	ht = std::make_unique<HashTable>();
-	this->memberNode->addr = *address;
+	this->memberNode->addr = address;
 }
 
 /**

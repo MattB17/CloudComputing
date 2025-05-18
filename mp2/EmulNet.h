@@ -89,7 +89,7 @@ public:
  	EmulNet(EmulNet &anotherEmulNet);
  	EmulNet& operator = (EmulNet &anotherEmulNet);
  	virtual ~EmulNet();
-	void *ENinit(Address *myaddr, short port);
+	Address ENinit();
 	int ENsend(Address *myaddr, Address *toaddr, string data);
 	int ENsend(Address *myaddr, Address *toaddr, char *data, int size);
 	int ENrecv(Address *myaddr, int (* enq)(void *, char *, int), struct timeval *t, int times, void *queue);

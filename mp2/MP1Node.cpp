@@ -155,17 +155,17 @@ MP1Node::MP1Node(std::shared_ptr<Member> member,
 	               const Params &params,
 								 std::shared_ptr<EmulNet> emul,
 								 std::shared_ptr<Log> log,
-								 Address *address): par(params) {
+								 Address address): par(params) {
 	for( int i = 0; i < 6; i++ ) {
 		NULLADDR[i] = 0;
 	}
 	this->memberNode = member;
 	this->emulNet = emul;
 	this->log = log;
-	this->memberNode->addr = *address;
+	this->memberNode->addr = address;
 	this->addressHandler = new AddressHandler();
 	this->gossipProp = 0.5;
-	this->addrStr = std::string(address->addr);
+	this->addrStr = std::string(address.addr);
 }
 
 /**

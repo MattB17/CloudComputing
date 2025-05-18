@@ -181,7 +181,7 @@ public:
 	MP2Node(
 		std::shared_ptr<Member> memberNode, const Params &par,
 		std::shared_ptr<EmulNet> emulNet, std::shared_ptr<Log> log,
-		Address *addressOfMember);
+		Address addressOfMember);
 	std::shared_ptr<Member> getMemberNode() {
 		return this->memberNode;
 	}

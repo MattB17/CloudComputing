@@ -69,10 +69,11 @@ EmulNet::~EmulNet() {}
  *
  * DESCRIPTION: Init the emulnet for this node
  */
-void *EmulNet::ENinit(Address *myaddr, short port) {
+Address EmulNet::ENinit() {
 	// Initialize data structures for this member
-	*(int *)(myaddr->addr) = emulnet.nextid++;
-    *(short *)(&myaddr->addr[4]) = 0;
+	Address myaddr;
+	*(int *)(&(myaddr.addr)) = emulnet.nextid++;
+  *(short *)(&(myaddr.addr[4])) = 0;
 	return myaddr;
 }
 

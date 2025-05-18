@@ -136,7 +136,7 @@ private:
 public:
 	MP1Node(
     std::shared_ptr<Member>, const Params &, std::shared_ptr<EmulNet>,
-    std::shared_ptr<Log>, Address *);
+    std::shared_ptr<Log>, Address);
 
 	std::shared_ptr<Member> getMemberNode() {
 		return memberNode;

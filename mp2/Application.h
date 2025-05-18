@@ -54,8 +54,8 @@ private:
 	std::shared_ptr<EmulNet> en;
 	std::shared_ptr<EmulNet> en1;
   std::shared_ptr<Log> log;
-	MP1Node **mp1;
-	MP2Node **mp2;
+	std::vector<std::unique_ptr<MP1Node>> mp1;
+	std::vector<std::unique_ptr<MP2Node>> mp2;
 	std::shared_ptr<Params> par;
 	map<string, string> testKVPairs;
 public:

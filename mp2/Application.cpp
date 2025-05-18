@@ -27,16 +27,13 @@ void handler(int sig) {
 int main(int argc, char *argv[]) {
 	//signal(SIGSEGV, handler);
 	if ( argc != ARGS_COUNT ) {
-		cout<<"Configuration (i.e., *.conf) file File Required"<<endl;
+		std::cout << "Configuration (i.e., *.conf) file File Required" << std::endl;
 		return FAILURE;
 	}
 
-	// Create a new application object
-	Application *app = new Application(argv[1]);
-	// Call the run function
+	// Create a new application object and run it.
+	std::unique_ptr<Application> app = std::make_unique<Application>(argv[1]);
 	app->run();
-	// When done delete the application object
-	delete(app);
 
 	return SUCCESS;
 }
@@ -52,10 +49,8 @@ Application::Application(char *infile) {
 	log = std::make_shared<Log>(par);
 	en = std::make_shared<EmulNet>(par);
 	en1 = std::make_shared<EmulNet>(par);
-	// An array of MP1Nodes with EN_GPSZ elements
-	mp1 = (MP1Node **) malloc(par->EN_GPSZ * sizeof(MP1Node *));
-	// An array of MP2Nodes with EN_GPSZ elements
-	mp2 = (MP2Node **) malloc(par->EN_GPSZ * sizeof(MP2Node *));
+	mp1 = std::vector<std::unique_ptr<MP1Node>>(par->EN_GPSZ);
+	mp2 = std::vector<std::unique_ptr<MP2Node>>(par->EN_GPSZ);
 
 	/*
 	 * Init all nodes
@@ -63,29 +58,20 @@ Application::Application(char *infile) {
 	for( i = 0; i < par->EN_GPSZ; i++ ) {
 		std::shared_ptr<Member> memberNode = std::make_shared<Member>();
 		memberNode->inited = false;
-		Address *addressOfMemberNode = new Address();
-		Address joinaddr;
-		joinaddr = getjoinaddr();
-		addressOfMemberNode = (Address *) en->ENinit(addressOfMemberNode, par->PORTNUM);
-		mp1[i] = new MP1Node(memberNode, *par, en, log, addressOfMemberNode);
-		mp2[i] = new MP2Node(memberNode, *par, en1, log, addressOfMemberNode);
+		Address addressOfMemberNode = en->ENinit();
+		mp1[i] = std::make_unique<MP1Node>(
+			memberNode, *par, en, log, addressOfMemberNode);
+		mp2[i] = std::make_unique<MP2Node>(
+			memberNode, *par, en1, log, addressOfMemberNode);
 		log->LOG(&(mp1[i]->getMemberNode()->addr), "APP");
 		log->LOG(&(mp2[i]->getMemberNode()->addr), "APP MP2");
-		delete addressOfMemberNode;
 	}
 }
 
 /**
  * Destructor
  */
-Application::~Application() {
-	for ( int i = 0; i < par->EN_GPSZ; i++ ) {
-		delete mp1[i];
-		delete mp2[i];
-	}
-	free(mp1);
-	free(mp2);
-}
+Application::~Application() {}
 
 /**
  * FUNCTION NAME: run
@@ -144,15 +130,16 @@ void Application::mp1Run() {
 		/*
 		 * Receive messages from the network and queue them in the membership protocol queue
 		 */
-		if( par->getcurrtime() > (int)(par->STEP_RATE*i) && !(mp1[i]->getMemberNode()->bFailed) ) {
+		if(par->getcurrtime() > (int)(par->STEP_RATE*i) &&
+		   !(mp1[i]->getMemberNode()->bFailed) )
+		{
 			// Receive messages from the network and queue them
 			mp1[i]->recvLoop();
 		}
-
 	}
 
 	// For all the nodes in the system
-	for( i = par->EN_GPSZ - 1; i >= 0; i-- ) {
+	for(i = par->EN_GPSZ - 1; i >= 0; i--) {
 
 		/*
 		 * Introduce nodes into the distributed system
@@ -160,23 +147,28 @@ void Application::mp1Run() {
 		if( par->getcurrtime() == (int)(par->STEP_RATE*i) ) {
 			// introduce the ith node into the system at time STEPRATE*i
 			mp1[i]->nodeStart(JOINADDR, par->PORTNUM);
-			cout<<i<<"-th introduced node is assigned with the address: "<<mp1[i]->getMemberNode()->addr.getAddress() << endl;
+			std::cout << i;
+			std::cout << "-th introduced node is assigned with the address: ";
+			std::cout << mp1[i]->getMemberNode()->addr.getAddress() << std::endl;
 			nodeCount += i;
 		}
 
 		/*
 		 * Handle all the messages in your queue and send heartbeats
 		 */
-		else if( par->getcurrtime() > (int)(par->STEP_RATE*i) && !(mp1[i]->getMemberNode()->bFailed) ) {
+		else if (par->getcurrtime() > (int)(par->STEP_RATE*i) &&
+		         !(mp1[i]->getMemberNode()->bFailed))
+		{
 			// handle messages and send heartbeats
 			mp1[i]->nodeLoop();
 			#ifdef DEBUGLOG
-			if( (i == 0) && (par->globaltime % 500 == 0) ) {
-				log->LOG(&mp1[i]->getMemberNode()->addr, "@@time=%d", par->getcurrtime());
-			}
+			  if ((i == 0) && (par->globaltime % 500 == 0))
+			  {
+				  log->LOG(
+					  &mp1[i]->getMemberNode()->addr, "@@time=%d", par->getcurrtime());
+			  }
 			#endif
 		}
-
 	}
 }
 
@@ -192,14 +184,17 @@ void Application::mp2Run() {
 	int i;
 
 	// For all the nodes in the system
-	for( i = 0; i <= par->EN_GPSZ-1; i++) {
-
+	for (i = 0; i <= par->EN_GPSZ-1; i++)
+	{
 		/*
 		 * 1) Update the ring
 		 * 2) Receive messages from the network and queue them in the KV store queue
 		 */
-		if ( par->getcurrtime() > (int)(par->STEP_RATE*i) && !mp2[i]->getMemberNode()->bFailed ) {
-			if ( mp2[i]->getMemberNode()->inited && mp2[i]->getMemberNode()->inGroup ) {
+		if (par->getcurrtime() > (int)(par->STEP_RATE*i) &&
+		    !mp2[i]->getMemberNode()->bFailed)
+		{
+			if ( mp2[i]->getMemberNode()->inited && mp2[i]->getMemberNode()->inGroup)
+			{
 				// Step 1
 				mp2[i]->updateRing();
 			}
@@ -211,8 +206,10 @@ void Application::mp2Run() {
 	/**
 	 * Handle messages from the queue and update the DHT
 	 */
-	for ( i = par->EN_GPSZ-1; i >= 0; i-- ) {
-		if ( par->getcurrtime() > (int)(par->STEP_RATE*i) && !mp2[i]->getMemberNode()->bFailed ) {
+	for (i = par->EN_GPSZ-1; i >= 0; i--) {
+		if (par->getcurrtime() > (int)(par->STEP_RATE*i) &&
+		    !mp2[i]->getMemberNode()->bFailed)
+		{
 			mp2[i]->checkMessages();
 		}
 	}
@@ -220,14 +217,15 @@ void Application::mp2Run() {
 	/**
 	 * Insert a set of test key value pairs into the system
 	 */
-	if ( par->getcurrtime() == INSERT_TIME ) {
+	if (par->getcurrtime() == INSERT_TIME) {
 		insertTestKVPairs();
 	}
 
 	/**
 	 * Test CRUD operations
 	 */
-	if ( par->getcurrtime() >= TEST_TIME ) {
+	if (par->getcurrtime() >= TEST_TIME)
+	{
 		/**************
 		 * CREATE TEST
 		 **************/
@@ -235,8 +233,10 @@ void Application::mp2Run() {
 		 * TEST 1: Checks if there are RF * NUMBER_OF_INSERTS CREATE SUCCESS message are in the log
 		 *
 		 */
-		if ( par->getcurrtime() == TEST_TIME && CREATE_TEST == par->CRUDTEST ) {
-			cout<<endl<<"Doing create test at time: "<<par->getcurrtime()<<endl;
+		if (par->getcurrtime() == TEST_TIME && CREATE_TEST == par->CRUDTEST)
+		{
+			std::cout << std::endl << "Doing create test at time: ";
+			std::cout << par->getcurrtime() << std::endl;
 		} // End of create test
 
 		/***************
@@ -248,7 +248,8 @@ void Application::mp2Run() {
 		 * TEST 2: Delete a non-existent key. Check for a DELETE FAIL message in the lgo
 		 *
 		 */
-		else if ( par->getcurrtime() == TEST_TIME && DELETE_TEST == par->CRUDTEST ) {
+		else if (par->getcurrtime() == TEST_TIME && DELETE_TEST == par->CRUDTEST)
+		{
 			deleteTest();
 		} // End of delete test
 
@@ -283,7 +284,8 @@ void Application::mp2Run() {
 		 * TEST 5: Read a non-existent key. Check for a READ FAIL message in the log
 		 *
 		 */
-		else if ( par->getcurrtime() >= TEST_TIME && READ_TEST == par->CRUDTEST ) {
+		else if (par->getcurrtime() >= TEST_TIME && READ_TEST == par->CRUDTEST)
+		{
 			readTest();
 		} // end of read test
 
@@ -318,7 +320,8 @@ void Application::mp2Run() {
 		 * TEST 5: Update a non-existent key. Check for a UPDATE FAIL message in the log
 		 *
 		 */
-		else if ( par->getcurrtime() >= TEST_TIME && UPDATE_TEST == par->CRUDTEST ) {
+		else if (par->getcurrtime() >= TEST_TIME && UPDATE_TEST == par->CRUDTEST)
+		{
 			updateTest();
 		} // End of update test
 
