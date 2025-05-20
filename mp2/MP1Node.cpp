@@ -496,7 +496,7 @@ void MP1Node::addMembershipEntry(Address* newAddr, long newHeartbeat)
 void MP1Node::logEvent(const char* eventMsg, Address* addr) {
 	#ifdef DEBUGLOG
 	  char logMsg[1024];
-	  sprintf(logMsg, eventMsg,
+	  snprintf(logMsg, sizeof(logMsg), eventMsg,
 					  addr->addr[0],
 					  addr->addr[1],
 					  addr->addr[2],
@@ -653,8 +653,9 @@ void MP1Node::printMemberTable()
 			&mleAddress, mle->getid(), mle->getport());
 		#ifdef DEBUGLOG
 		  static char logMsg[1024];
-			sprintf(
+			snprintf(
 				logMsg,
+				sizeof(logMsg),
 				"Entry for %d.%d.%d.%d:%d with heartbeat %ld, last updated at %ld",
 				mleAddress.addr[0],
 				mleAddress.addr[1],
