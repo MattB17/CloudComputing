@@ -1195,7 +1195,6 @@ void MP2Node::sendReplyToCoordinator(Message& coordMsg, bool operationSucceeded)
 	Message replyMsg = Message(
 		coordMsg.transID,
 		this->memberNode->addr,
-		MessageType::REPLY,
 		operationSucceeded);
 
 	// Send the reply to the coordinator

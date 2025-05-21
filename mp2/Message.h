@@ -19,13 +19,15 @@ class Message{
 public:
 	MessageType type;
 	ReplicaType replica;
-	string key;
-	string value;
+	std::string key;
+	std::string value;
 	Address fromAddr;
 	int transID;
 	bool success; // success or not
+
 	// delimiter
-	string delimiter;
+  static const std::string delimiter;
+
 	// construct a message from a string (basically deserialize)
 	Message(string message);
 	Message(const Message& anotherMessage);
@@ -35,12 +37,12 @@ public:
 	// construct a read or delete message
 	Message(int _transID, Address _fromAddr, MessageType _type, string _key);
 	// construct reply message
-	Message(int _transID, Address _fromAddr, MessageType _type, bool _success);
+	Message(int _transID, Address _fromAddr, bool _success);
 	// construct read reply message
 	Message(int _transID, Address _fromAddr, string _value);
 	Message& operator = (const Message& anotherMessage);
 	// serialize to a string
-	string toString();
+	std::string toString();
 };
 
 #endif

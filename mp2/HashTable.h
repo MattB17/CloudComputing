@@ -21,9 +21,9 @@
  *
  */
 class HashTable {
+private:
+	std::map<string, string> hashTable;
 public:
-	map<string, string> hashTable;
-//public:
 	HashTable();
 	bool create(string key, string value);
 	string read(string key);

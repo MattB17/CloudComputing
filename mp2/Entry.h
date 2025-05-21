@@ -15,14 +15,14 @@
  * `delimiter` is used to convert the entry to a string or parse an entry from
  * a string.
  */
-class Entry{
+class Entry {
 public:
-	string value;
+	std::string value;
 	int timestamp;
 	ReplicaType replica;
-	string delimiter;
+	const std::string delimiter;
 
-	Entry(string entry);
-	Entry(string _value, int _timestamp, ReplicaType _replica);
-	string convertToString();
+	Entry(std::string entry);
+	Entry(std::string _value, int _timestamp, ReplicaType _replica);
+	std::string convertToString() const;
 };

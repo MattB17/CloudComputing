@@ -5,6 +5,9 @@
  **********************************/
 #include "Message.h"
 
+// Initializing static delimiter
+const std::string Message::delimiter = "::";
+
 /**
  * Constructor
  */
@@ -14,12 +17,13 @@
 // transID::fromAddr::DELETE::key
 // transID::fromAddr::REPLY::sucess
 // transID::fromAddr::READREPLY::value
-Message::Message(string message){
-	this->delimiter = "::";
-	vector<string> tuple;
+Message::Message(std::string message)
+{
+	std::vector<string> tuple;
 	size_t pos = message.find(delimiter);
 	size_t start = 0;
-	while (pos != string::npos) {
+	while (pos != string::npos)
+	{
 		string field = message.substr(start, pos-start);
 		tuple.push_back(field);
 		start = pos + 2;
@@ -31,7 +35,8 @@ Message::Message(string message){
 	Address addr(tuple.at(1));
 	fromAddr = addr;
 	type = static_cast<MessageType>(stoi(tuple.at(2)));
-	switch(type){
+	switch (type)
+	{
 		case CREATE:
 		case UPDATE:
 			key = tuple.at(3);
@@ -59,21 +64,20 @@ Message::Message(string message){
  * Constructor
  */
 // construct a create or update message
-Message::Message(int _transID, Address _fromAddr, MessageType _type, string _key, string _value, ReplicaType _replica){
-	this->delimiter = "::";
-	transID = _transID;
-	fromAddr = _fromAddr;
-	type = _type;
-	key = _key;
-	value = _value;
-	replica = _replica;
-}
+Message::Message(int _transID,
+	               Address _fromAddr,
+								 MessageType _type,
+								 std::string _key,
+								 std::string _value,
+								 ReplicaType _replica)
+	: type(_type), replica(_replica), key(_key), value(_value),
+	  fromAddr(_fromAddr), transID(_transID) {}
 
 /**
  * Constructor
  */
-Message::Message(const Message& anotherMessage) {
-	this->delimiter = anotherMessage.delimiter;
+Message::Message(const Message& anotherMessage)
+{
 	this->fromAddr = anotherMessage.fromAddr;
 	this->key = anotherMessage.key;
 	this->replica = anotherMessage.replica;
@@ -86,58 +90,49 @@ Message::Message(const Message& anotherMessage) {
 /**
  * Constructor
  */
-Message::Message(int _transID, Address _fromAddr, MessageType _type, string _key, string _value){
-	this->delimiter = "::";
-	transID = _transID;
-	fromAddr = _fromAddr;
-	type = _type;
-	key = _key;
-	value = _value;
-}
+Message::Message(int _transID,
+	               Address _fromAddr,
+								 MessageType _type,
+								 std::string _key,
+								 std::string _value)
+	: type(_type), key(_key), value(_value),
+	  fromAddr(_fromAddr), transID(_transID) {}
 
 /**
  * Constructor
  */
 // construct a read or delete message
-Message::Message(int _transID, Address _fromAddr, MessageType _type, string _key){
-	this->delimiter = "::";
-	transID = _transID;
-	fromAddr = _fromAddr;
-	type = _type;
-	key = _key;
-}
+Message::Message(int _transID,
+	               Address _fromAddr,
+								 MessageType _type,
+								 std::string _key)
+	: type(_type), key(_key), value(""), fromAddr(_fromAddr), transID(_transID) {}
 
 /**
  * Constructor
  */
 // construct reply message
-Message::Message(int _transID, Address _fromAddr, MessageType _type, bool _success){
-	this->delimiter = "::";
-	transID = _transID;
-	fromAddr = _fromAddr;
-	type = _type;
-	success = _success;
-}
+Message::Message(int _transID,
+	               Address _fromAddr,
+								 bool _success)
+	: type(REPLY), fromAddr(_fromAddr), transID(_transID), success(_success) {}
 
 /**
  * Constructor
  */
 // construct read reply message
-Message::Message(int _transID, Address _fromAddr, string _value){
-	this->delimiter = "::";
-	transID = _transID;
-	fromAddr = _fromAddr;
-	type = READREPLY;
-	value = _value;
-}
+Message::Message(int _transID, Address _fromAddr, string _value)
+  : type(READREPLY), value(_value), fromAddr(_fromAddr), transID(_transID) {}
 
 /**
  * FUNCTION NAME: toString
  *
  * DESCRIPTION: Serialized Message in string format
  */
-string Message::toString(){
-	string message = to_string(transID) + delimiter + fromAddr.getAddress() + delimiter + to_string(type) + delimiter;
+std::string Message::toString()
+{
+	std::string message = (to_string(transID) + delimiter +
+	  fromAddr.getAddress() + delimiter + to_string(type) + delimiter);
 	switch(type){
 		case CREATE:
 		case UPDATE:
@@ -163,8 +158,8 @@ string Message::toString(){
 /**
  * Assignment operator overloading
  */
-Message& Message::operator =(const Message& anotherMessage) {
-	this->delimiter = anotherMessage.delimiter;
+Message& Message::operator =(const Message& anotherMessage)
+{
 	this->fromAddr = anotherMessage.fromAddr;
 	this->key = anotherMessage.key;
 	this->replica = anotherMessage.replica;

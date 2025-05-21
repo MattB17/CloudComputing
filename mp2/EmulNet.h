@@ -27,7 +27,7 @@ typedef struct en_msg {
 	Address from;
 	// Destination node
 	Address to;
-}en_msg;
+} en_msg;
 
 /**
  * Class Name: EM

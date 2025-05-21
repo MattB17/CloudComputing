@@ -21,9 +21,6 @@
 
 #define TRANSACTION_TIMEOUT 10
 
-// Transaction types
-enum TransactionType {T_CREATE, T_READ, T_UPDATE, T_DELETE};
-
 /*
  * CLASS NAME: WriteTransactionState
  *

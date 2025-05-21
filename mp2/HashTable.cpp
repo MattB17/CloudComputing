@@ -21,7 +21,8 @@ HashTable::~HashTable() {}
  * true on SUCCESS
  * false in FAILURE
  */
-bool HashTable::create(string key, string value) {
+bool HashTable::create(string key, string value)
+{
 	hashTable.emplace(key, value);
 	return true;
 }
@@ -35,18 +36,16 @@ bool HashTable::create(string key, string value) {
  * string value if found
  * else it returns an empty string
  */
-string HashTable::read(string key) {
-	map<string, string>::iterator search;
-
-	search = hashTable.find(key);
-	if ( search != hashTable.end() ) {
+std::string HashTable::read(string key)
+{
+	std::map<string, string>::iterator itr = hashTable.find(key);
+	if (itr != hashTable.end())
+	{
 		// Value found
-		return search->second;
+		return itr->second;
 	}
-	else {
-		// Value not found
-		return "";
-	}
+	// Value not found
+	return "";
 }
 
 /**
@@ -61,16 +60,15 @@ string HashTable::read(string key) {
  * false on FAILURE (if the key doesn't exist)
  */
 bool HashTable::update(string key, string newValue) {
-	map<string, string>::iterator update;
+	std::map<string, string>::iterator itr = hashTable.find(key);
 
-	if (read(key).empty()) {
+	if (itr == hashTable.end())
+	{
 		// Key not found
 		return false;
 	}
 	// Key found
-	//update = hashTable.at(key) = newValue;
 	hashTable.at(key) = newValue;
-	// Update successful
 	return true;
 }
 
@@ -108,7 +106,8 @@ bool HashTable::deleteKey(string key) {
  * true if hash table is empty
  * false otherwise
  */
-bool HashTable::isEmpty() {
+bool HashTable::isEmpty()
+{
 	return hashTable.empty();
 }
 
@@ -120,8 +119,9 @@ bool HashTable::isEmpty() {
  * RETURNS:
  * size of the table as unit
  */
-unsigned long HashTable::currentSize() {
-	return (unsigned  long)hashTable.size();
+unsigned long HashTable::currentSize()
+{
+	return (unsigned long)(hashTable.size());
 }
 
 /**
@@ -129,7 +129,8 @@ unsigned long HashTable::currentSize() {
  *
  * DESCRIPTION: Clear all contents from the hash table
  */
-void HashTable::clear() {
+void HashTable::clear()
+{
 	hashTable.clear();
 }
 
@@ -141,6 +142,7 @@ void HashTable::clear() {
  * RETURNS:
  * unsigned long count (Should be always 1)
  */
-unsigned long HashTable::count(string key) {
-	return (unsigned long) hashTable.count(key);
+unsigned long HashTable::count(string key)
+{
+	return (unsigned long)(hashTable.count(key));
 }
