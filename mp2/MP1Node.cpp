@@ -180,10 +180,12 @@ MP1Node::~MP1Node() {}
  * 				This function is called by a node to receive messages currently waiting for it
  */
 int MP1Node::recvLoop() {
-    if ( memberNode->bFailed ) {
+    if (memberNode->failed)
+		{
     	return false;
     }
-    else {
+    else
+		{
     	return emulNet->ENrecv(
 				&(memberNode->addr), enqueueWrapper, NULL, 1, &(memberNode->mp1q));
     }
@@ -231,14 +233,13 @@ void MP1Node::nodeStart(char *servaddrstr, short servport) {
  * DESCRIPTION: Find out who I am and start up
  */
 int MP1Node::initThisNode(Address *joinaddr) {
-	memberNode->bFailed = false;
+	memberNode->failed = false;
 	memberNode->inited = true;
 	memberNode->inGroup = false;
     // node is up!
-	memberNode->nnb = 0;
+	memberNode->numNeighbours = 0;
 	memberNode->heartbeat = 0;
 	memberNode->pingCounter = TGOSSIP;
-	memberNode->timeOutCounter = -1;
   initMemberListTable();
 
   return 0;
@@ -292,7 +293,7 @@ int MP1Node::finishUpThisNode(){
  * 				Check your messages in queue and perform membership protocol duties
  */
 void MP1Node::nodeLoop() {
-    if (memberNode->bFailed) {
+    if (memberNode->failed) {
     	return;
     }
 
@@ -484,7 +485,10 @@ void MP1Node::addMembershipEntry(Address* newAddr, long newHeartbeat)
 	memTableIdx[newAddrStr] = memberNode->memberList.size();
 	memberNode->memberList.push_back(mle);
 	log->logNodeAdd(&memberNode->addr, newAddr);
-  memberNode->nnb++;
+	if (*newAddr != memberNode->addr)
+	{
+    memberNode->numNeighbours++;
+  }
 }
 
 /**
@@ -544,7 +548,7 @@ void MP1Node::cleanMemberList() {
 		{
 			log->logNodeRemove(&memberNode->addr, &entryAddr);
 			memTableIdx.erase(entryAddrStr);
-			memberNode->nnb--;
+			memberNode->numNeighbours--;
 		}
 	}
 

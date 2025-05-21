@@ -616,7 +616,7 @@ bool MP2Node::iAmPrimary(string key, int myIdx)
  * DESCRIPTION: Receive messages from EmulNet and push into the queue (mp2q)
  */
 bool MP2Node::recvLoop() {
-    if ( memberNode->bFailed ) {
+    if ( memberNode->failed ) {
     	return false;
     }
     else {

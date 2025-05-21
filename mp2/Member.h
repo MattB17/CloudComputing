@@ -35,6 +35,7 @@ public:
 	 // Overloaded = operator
 	Address& operator =(const Address &anotherAddress);
 	bool operator ==(const Address &anotherAddress);
+	bool operator !=(const Address &anotherAddress);
 	Address(string address) {
 		size_t pos = address.find(":");
 		int id = stoi(address.substr(0, pos));
@@ -70,14 +71,14 @@ public:
 	MemberListEntry(): id(0), port(0), heartbeat(0), timestamp(0) {}
 	MemberListEntry(const MemberListEntry &anotherMLE);
 	MemberListEntry& operator =(const MemberListEntry &anotherMLE);
-	int getid();
-	short getport();
-	long getheartbeat();
-	long gettimestamp();
-	void setid(int id);
-	void setport(short port);
-	void setheartbeat(long hearbeat);
-	void settimestamp(long timestamp);
+	int getid() { return id; }
+	short getport() { return port; }
+	long getheartbeat() { return heartbeat; }
+	long gettimestamp() { return timestamp; }
+	void setid(int id) { this->id = id; }
+	void setport(short port) { this->port = port; }
+	void setheartbeat(long heartbeat) { this->heartbeat = heartbeat; }
+	void settimestamp(long timestamp) { this->timestamp = timestamp; }
 };
 
 /**
@@ -88,38 +89,29 @@ public:
 // Declaration and definition here
 class Member {
 public:
-	// This member's Address
-	Address addr;
-	// boolean indicating if this member is up
-	bool inited;
-	// boolean indicating if this member is in the group
-	bool inGroup;
-	// boolean indicating if this member has failed
-	bool bFailed;
-	// number of my neighbors
-	int nnb;
-	// the node's own heartbeat
-	long heartbeat;
-	// counter for next ping
-	int pingCounter;
-	// counter for ping timeout
-	int timeOutCounter;
-	// Membership table
-	vector<MemberListEntry> memberList;
-	// My position in the membership table
-	vector<MemberListEntry>::iterator myPos;
-	// Queue for failure detection messages
-	queue<q_elt> mp1q;
-	// Queue for KVstore messages
-	queue<q_elt> mp2q;
+	Address addr; // my address
+	bool inited; // indicates if I have been initialized
+	bool inGroup; // indicates if i'm in group
+	bool failed; // indicates if member has failed.
+	int numNeighbours; // number of neighbours
+	long heartbeat; // my heartbeat
+	int pingCounter; // counter for next ping
+	vector<MemberListEntry> memberList; // Membership table
+	queue<q_elt> mp1q; // Queue for failure detection messages
+	queue<q_elt> mp2q; // Queue for KVstore messages
 	/**
 	 * Constructor
 	 */
-	Member(): inited(false), inGroup(false), bFailed(false), nnb(0), heartbeat(0), pingCounter(0), timeOutCounter(0) {}
+	Member();
 	// copy constructor
 	Member(const Member &anotherMember);
 	// Assignment operator overloading
 	Member& operator =(const Member &anotherMember);
+	// Move Constructor
+	Member(Member &&anotherMember);
+	// Virtual destructor.
+	// The destructor does nothing but the virtual ensures it is cleaned up
+	// before any child classes.
 	virtual ~Member() {}
 };
 

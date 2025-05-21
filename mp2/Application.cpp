@@ -131,7 +131,7 @@ void Application::mp1Run() {
 		 * Receive messages from the network and queue them in the membership protocol queue
 		 */
 		if(par->getcurrtime() > (int)(par->STEP_RATE*i) &&
-		   !(mp1[i]->getMemberNode()->bFailed) )
+		   !(mp1[i]->getMemberNode()->failed) )
 		{
 			// Receive messages from the network and queue them
 			mp1[i]->recvLoop();
@@ -157,7 +157,7 @@ void Application::mp1Run() {
 		 * Handle all the messages in your queue and send heartbeats
 		 */
 		else if (par->getcurrtime() > (int)(par->STEP_RATE*i) &&
-		         !(mp1[i]->getMemberNode()->bFailed))
+		         !(mp1[i]->getMemberNode()->failed))
 		{
 			// handle messages and send heartbeats
 			mp1[i]->nodeLoop();
@@ -191,7 +191,7 @@ void Application::mp2Run() {
 		 * 2) Receive messages from the network and queue them in the KV store queue
 		 */
 		if (par->getcurrtime() > (int)(par->STEP_RATE*i) &&
-		    !mp2[i]->getMemberNode()->bFailed)
+		    !mp2[i]->getMemberNode()->failed)
 		{
 			if ( mp2[i]->getMemberNode()->inited && mp2[i]->getMemberNode()->inGroup)
 			{
@@ -208,7 +208,7 @@ void Application::mp2Run() {
 	 */
 	for (i = par->EN_GPSZ-1; i >= 0; i--) {
 		if (par->getcurrtime() > (int)(par->STEP_RATE*i) &&
-		    !mp2[i]->getMemberNode()->bFailed)
+		    !mp2[i]->getMemberNode()->failed)
 		{
 			mp2[i]->checkMessages();
 		}
@@ -352,7 +352,7 @@ void Application::fail() {
 		         "Node failed at time=%d",
 						 par->getcurrtime());
 		#endif
-		mp1[removed]->getMemberNode()->bFailed = true;
+		mp1[removed]->getMemberNode()->failed = true;
 	}
 	else if (par->getcurrtime() == 100)
 	{
@@ -364,7 +364,7 @@ void Application::fail() {
 			         "Node failed at time = %d",
 							 par->getcurrtime());
 			#endif
-			mp1[i]->getMemberNode()->bFailed = true;
+			mp1[i]->getMemberNode()->failed = true;
 		}
 	}
 
@@ -400,7 +400,7 @@ int Application::findARandomNodeThatIsAlive() {
 	do
 	{
 		number = (rand()%par->EN_GPSZ);
-	} while (mp2[number]->getMemberNode()->bFailed);
+	} while (mp2[number]->getMemberNode()->failed);
 	return number;
 }
 
@@ -578,7 +578,7 @@ void Application::readTest() {
 			if (mp2[i]->getMemberNode()->addr.getAddress() ==
 			    replicas.at(replicaIdToFail).getAddress()->getAddress())
 			{
-				if (!mp2[i]->getMemberNode()->bFailed)
+				if (!mp2[i]->getMemberNode()->failed)
 				{
 					nodeToFail = i;
 					failedOneNode = true;
@@ -603,8 +603,8 @@ void Application::readTest() {
 			log->LOG(&mp2[nodeToFail]->getMemberNode()->addr,
 			         "Node failed at time=%d",
 							 par->getcurrtime());
-			mp2[nodeToFail]->getMemberNode()->bFailed = true;
-			mp1[nodeToFail]->getMemberNode()->bFailed = true;
+			mp2[nodeToFail]->getMemberNode()->failed = true;
+			mp1[nodeToFail]->getMemberNode()->failed = true;
 			std::cout << std::endl << "Failed a replica node" << std::endl;
 		}
 		else
@@ -664,7 +664,7 @@ void Application::readTest() {
 						if (mp2[i]->getMemberNode()->addr.getAddress() ==
 						    replicas.at(replicaIdToFail).getAddress()->getAddress())
 						{
-							if (!mp2[i]->getMemberNode()->bFailed)
+							if (!mp2[i]->getMemberNode()->failed)
 							{
 								nodesToFail.emplace_back(i);
 								replicaIdToFail--;
@@ -701,8 +701,8 @@ void Application::readTest() {
 					log->LOG(&mp2[nodesToFail.at(i)]->getMemberNode()->addr,
 					         "Node failed at time=%d",
 									 par->getcurrtime());
-					mp2[nodesToFail.at(i)]->getMemberNode()->bFailed = true;
-					mp1[nodesToFail.at(i)]->getMemberNode()->bFailed = true;
+					mp2[nodesToFail.at(i)]->getMemberNode()->failed = true;
+					mp1[nodesToFail.at(i)]->getMemberNode()->failed = true;
 					std::cout << std::endl << "Failed a replica node" << std::endl;
 				}
 			}
@@ -767,7 +767,7 @@ void Application::readTest() {
 		replicas = mp2[number]->findNodes(it->first);
 		for ( int i = 0; i < par->EN_GPSZ; i++ )
 		{
-			if (!mp2[i]->getMemberNode()->bFailed)
+			if (!mp2[i]->getMemberNode()->failed)
 			{
 				std::string memberAddr = mp2[i]->getMemberNode()->addr.getAddress();
 				if (memberAddr != replicas.at(PRIMARY).getAddress()->getAddress() &&
@@ -778,8 +778,8 @@ void Application::readTest() {
 					log->LOG(&mp2[i]->getMemberNode()->addr,
 					         "Node failed at time=%d",
 									 par->getcurrtime());
-					mp2[i]->getMemberNode()->bFailed = true;
-					mp1[i]->getMemberNode()->bFailed = true;
+					mp2[i]->getMemberNode()->failed = true;
+					mp1[i]->getMemberNode()->failed = true;
 					failedOneNode = true;
 					std::cout << std::endl << "Failed a non-replica node" << std::endl;
 					break;
@@ -902,7 +902,7 @@ void Application::updateTest() {
 			if (mp2[i]->getMemberNode()->addr.getAddress() ==
 			    replicas.at(replicaIdToFail).getAddress()->getAddress())
 			{
-				if (!mp2[i]->getMemberNode()->bFailed)
+				if (!mp2[i]->getMemberNode()->failed)
 				{
 					nodeToFail = i;
 					failedOneNode = true;
@@ -927,8 +927,8 @@ void Application::updateTest() {
 			log->LOG(&mp2[nodeToFail]->getMemberNode()->addr,
 			         "Node failed at time=%d",
 							 par->getcurrtime());
-			mp2[nodeToFail]->getMemberNode()->bFailed = true;
-			mp1[nodeToFail]->getMemberNode()->bFailed = true;
+			mp2[nodeToFail]->getMemberNode()->failed = true;
+			mp1[nodeToFail]->getMemberNode()->failed = true;
 			std::cout << std::endl << "Failed a replica node" << std::endl;
 		}
 		else
@@ -987,7 +987,7 @@ void Application::updateTest() {
 						if (mp2[i]->getMemberNode()->addr.getAddress() ==
 						    replicas.at(replicaIdToFail).getAddress()->getAddress())
 						{
-							if (!mp2[i]->getMemberNode()->bFailed)
+							if (!mp2[i]->getMemberNode()->failed)
 							{
 								nodesToFail.emplace_back(i);
 								replicaIdToFail--;
@@ -1021,8 +1021,8 @@ void Application::updateTest() {
 					log->LOG(&mp2[nodesToFail.at(i)]->getMemberNode()->addr,
 					         "Node failed at time=%d",
 									 par->getcurrtime());
-					mp2[nodesToFail.at(i)]->getMemberNode()->bFailed = true;
-					mp1[nodesToFail.at(i)]->getMemberNode()->bFailed = true;
+					mp2[nodesToFail.at(i)]->getMemberNode()->failed = true;
+					mp1[nodesToFail.at(i)]->getMemberNode()->failed = true;
 					std::cout << std::endl << "Failed a replica node" << std::endl;
 				}
 			}
@@ -1086,7 +1086,7 @@ void Application::updateTest() {
 		replicas = mp2[number]->findNodes(it->first);
 		for (int i = 0; i < par->EN_GPSZ; i++)
 		{
-			if (!mp2[i]->getMemberNode()->bFailed)
+			if (!mp2[i]->getMemberNode()->failed)
 			{
 				std::string memberAddr = mp2[i]->getMemberNode()->addr.getAddress();
 				if (memberAddr != replicas.at(PRIMARY).getAddress()->getAddress() &&
@@ -1097,8 +1097,8 @@ void Application::updateTest() {
 					log->LOG(&mp2[i]->getMemberNode()->addr,
 					         "Node failed at time=%d",
 									 par->getcurrtime());
-					mp2[i]->getMemberNode()->bFailed = true;
-					mp1[i]->getMemberNode()->bFailed = true;
+					mp2[i]->getMemberNode()->failed = true;
+					mp1[i]->getMemberNode()->failed = true;
 					failedOneNode = true;
 					std::cout << std::endl << "Failed a non-replica node" << std::endl;
 					break;
