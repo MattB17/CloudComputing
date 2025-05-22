@@ -11,7 +11,13 @@
 #include "Params.h"
 #include "Member.h"
 
-enum testTYPE { CREATE_TEST, READ_TEST, UPDATE_TEST, DELETE_TEST };
+enum TestType
+{
+	CREATE_TEST,
+	READ_TEST,
+	UPDATE_TEST,
+	DELETE_TEST
+};
 
 /**
  * CLASS NAME: Params
@@ -20,18 +26,14 @@ enum testTYPE { CREATE_TEST, READ_TEST, UPDATE_TEST, DELETE_TEST };
  */
 class Params{
 public:
-	int MAX_NNB;                // max number of neighbors
-	int SINGLE_FAILURE;			// single/multi failure
-	double MSG_DROP_PROB;		// message drop probability
-	double STEP_RATE;		    // dictates the rate of insertion
-	int EN_GPSZ;			    // actual number of peers
+	int MAX_NUM_NEIGHBOURS;                // max number of neighbors
+	double STEP_RATE;		                   // dictates the rate of insertion
+	int NUM_PEERS;			                   // actual number of peers
 	int MAX_MSG_SIZE;
-	int DROP_MSG;
-	int dropmsg;
 	int globaltime;
 	int allNodesJoined;
 	short PORTNUM;
-	int CRUDTEST;
+	TestType testType;
 	Params();
 	void setparams(char *);
 	int getcurrtime() const;

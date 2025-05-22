@@ -96,11 +96,9 @@ int EmulNet::ENsend(Address *myaddr, Address *toaddr, char *data, int size)
 {
 	en_msg *em;
 	static char temp[2048];
-	int sendmsg = rand() % 100;
 
 	if ((emulnet.currbuffsize >= ENBUFFSIZE) ||
-	    (size + (int)sizeof(en_msg) >= par->MAX_MSG_SIZE) ||
-			(par->dropmsg && sendmsg < (int) (par->MSG_DROP_PROB * 100)))
+	    (size + (int)sizeof(en_msg) >= par->MAX_MSG_SIZE))
 	{
 		return 0;
 	}
@@ -217,7 +215,7 @@ int EmulNet::ENcleanup()
 		free(emulnet.buff[--emulnet.currbuffsize]);
 	}
 
-	for (i = 1; i <= par->EN_GPSZ; i++)
+	for (i = 1; i <= par->NUM_PEERS; i++)
 	{
 		fprintf(file, "node %3d ", i);
 		sent_total = 0;

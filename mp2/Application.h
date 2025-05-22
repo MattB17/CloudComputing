@@ -66,7 +66,6 @@ public:
 	int run();
 	void mp1Run();
 	void mp2Run();
-	void fail();
 	void insertTestKVPairs();
 	int findARandomNodeThatIsAlive();
 	void deleteTest();

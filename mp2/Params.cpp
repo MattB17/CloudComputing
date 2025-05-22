@@ -21,34 +21,33 @@ void Params::setparams(char *config_file) {
 	char CRUD[10];
 	FILE *fp = fopen(config_file,"r");
 
-	fscanf(fp,"MAX_NNB: %d", &MAX_NNB);
-	fscanf(fp,"\nSINGLE_FAILURE: %d", &SINGLE_FAILURE);
-	fscanf(fp,"\nDROP_MSG: %d", &DROP_MSG);
-	fscanf(fp,"\nMSG_DROP_PROB: %lf", &MSG_DROP_PROB);
+	fscanf(fp,"NODES: %d", &MAX_NUM_NEIGHBOURS);
 	fscanf(fp,"\nCRUD_TEST: %s", CRUD);
 
-	if ( 0 == strcmp(CRUD, "CREATE") ) {
-		this->CRUDTEST = CREATE_TEST;
+	if (0 == strcmp(CRUD, "CREATE"))
+	{
+		this->testType = CREATE_TEST;
 	}
-	else if ( 0 == strcmp(CRUD, "READ") ) {
-		this->CRUDTEST = READ_TEST;
+	else if (0 == strcmp(CRUD, "READ"))
+	{
+		this->testType = READ_TEST;
 	}
-	else if ( 0 == strcmp(CRUD, "UPDATE") ) {
-		this->CRUDTEST = UPDATE_TEST;
+	else if (0 == strcmp(CRUD, "UPDATE"))
+	{
+		this->testType = UPDATE_TEST;
 	}
-	else if ( 0 == strcmp(CRUD, "DELETE") ) {
-		this->CRUDTEST = DELETE_TEST;
+	else if (0 == strcmp(CRUD, "DELETE"))
+	{
+		this->testType = DELETE_TEST;
 	}
 
-	//printf("Parameters of the test case: %d %d %d %lf\n", MAX_NNB, SINGLE_FAILURE, DROP_MSG, MSG_DROP_PROB);
-
-	EN_GPSZ = MAX_NNB;
+  NUM_PEERS = MAX_NUM_NEIGHBOURS;
 	STEP_RATE=.25;
 	MAX_MSG_SIZE = 4000;
 	globaltime = 0;
-	dropmsg = 0;
 	allNodesJoined = 0;
-	for ( unsigned int i = 0; i < EN_GPSZ; i++ ) {
+	for (unsigned int i = 0; i < NUM_PEERS; i++)
+	{
 		allNodesJoined += i;
 	}
 	fclose(fp);

@@ -196,9 +196,9 @@ int MP1Node::recvLoop() {
  *
  * DESCRIPTION: Enqueue the message from Emulnet into the queue
  */
-int MP1Node::enqueueWrapper(void *env, char *buff, int size) {
-	Queue q;
-	return q.enqueue((queue<q_elt> *)env, (void *)buff, size);
+int MP1Node::enqueueWrapper(void *env, char *buff, int size)
+{
+	return Queue::enqueue((queue<q_elt> *)env, (void *)buff, size);
 }
 
 /**

@@ -49,13 +49,13 @@ Application::Application(char *infile) {
 	log = std::make_shared<Log>(par);
 	en = std::make_shared<EmulNet>(par);
 	en1 = std::make_shared<EmulNet>(par);
-	mp1 = std::vector<std::unique_ptr<MP1Node>>(par->EN_GPSZ);
-	mp2 = std::vector<std::unique_ptr<MP2Node>>(par->EN_GPSZ);
+	mp1 = std::vector<std::unique_ptr<MP1Node>>(par->NUM_PEERS);
+	mp2 = std::vector<std::unique_ptr<MP2Node>>(par->NUM_PEERS);
 
 	/*
 	 * Init all nodes
 	 */
-	for( i = 0; i < par->EN_GPSZ; i++ ) {
+	for( i = 0; i < par->NUM_PEERS; i++ ) {
 		std::shared_ptr<Member> memberNode = std::make_shared<Member>();
 		memberNode->inited = false;
 		Address addressOfMemberNode = en->ENinit();
@@ -101,15 +101,13 @@ int Application::run()
 			// Call the KV store functionalities
 			mp2Run();
 		}
-		// Fail some nodes
-		//fail();
 	}
 
 	// Clean up
 	en->ENcleanup();
 	en1->ENcleanup();
 
-	for(i=0;i<=par->EN_GPSZ-1;i++) {
+	for(i=0;i<=par->NUM_PEERS-1;i++) {
 		 mp1[i]->finishUpThisNode();
 	}
 
@@ -125,7 +123,7 @@ void Application::mp1Run() {
 	int i;
 
 	// For all the nodes in the system
-	for( i = 0; i <= par->EN_GPSZ-1; i++) {
+	for( i = 0; i <= par->NUM_PEERS-1; i++) {
 
 		/*
 		 * Receive messages from the network and queue them in the membership protocol queue
@@ -139,7 +137,7 @@ void Application::mp1Run() {
 	}
 
 	// For all the nodes in the system
-	for(i = par->EN_GPSZ - 1; i >= 0; i--) {
+	for(i = par->NUM_PEERS - 1; i >= 0; i--) {
 
 		/*
 		 * Introduce nodes into the distributed system
@@ -184,7 +182,7 @@ void Application::mp2Run() {
 	int i;
 
 	// For all the nodes in the system
-	for (i = 0; i <= par->EN_GPSZ-1; i++)
+	for (i = 0; i <= par->NUM_PEERS-1; i++)
 	{
 		/*
 		 * 1) Update the ring
@@ -206,7 +204,7 @@ void Application::mp2Run() {
 	/**
 	 * Handle messages from the queue and update the DHT
 	 */
-	for (i = par->EN_GPSZ-1; i >= 0; i--) {
+	for (i = par->NUM_PEERS-1; i >= 0; i--) {
 		if (par->getcurrtime() > (int)(par->STEP_RATE*i) &&
 		    !mp2[i]->getMemberNode()->failed)
 		{
@@ -233,7 +231,7 @@ void Application::mp2Run() {
 		 * TEST 1: Checks if there are RF * NUMBER_OF_INSERTS CREATE SUCCESS message are in the log
 		 *
 		 */
-		if (par->getcurrtime() == TEST_TIME && CREATE_TEST == par->CRUDTEST)
+		if (par->getcurrtime() == TEST_TIME && CREATE_TEST == par->testType)
 		{
 			std::cout << std::endl << "Doing create test at time: ";
 			std::cout << par->getcurrtime() << std::endl;
@@ -248,7 +246,7 @@ void Application::mp2Run() {
 		 * TEST 2: Delete a non-existent key. Check for a DELETE FAIL message in the lgo
 		 *
 		 */
-		else if (par->getcurrtime() == TEST_TIME && DELETE_TEST == par->CRUDTEST)
+		else if (par->getcurrtime() == TEST_TIME && DELETE_TEST == par->testType)
 		{
 			deleteTest();
 		} // End of delete test
@@ -284,7 +282,7 @@ void Application::mp2Run() {
 		 * TEST 5: Read a non-existent key. Check for a READ FAIL message in the log
 		 *
 		 */
-		else if (par->getcurrtime() >= TEST_TIME && READ_TEST == par->CRUDTEST)
+		else if (par->getcurrtime() >= TEST_TIME && READ_TEST == par->testType)
 		{
 			readTest();
 		} // end of read test
@@ -320,7 +318,7 @@ void Application::mp2Run() {
 		 * TEST 5: Update a non-existent key. Check for a UPDATE FAIL message in the log
 		 *
 		 */
-		else if (par->getcurrtime() >= TEST_TIME && UPDATE_TEST == par->CRUDTEST)
+		else if (par->getcurrtime() >= TEST_TIME && UPDATE_TEST == par->testType)
 		{
 			updateTest();
 		} // End of update test
@@ -329,58 +327,12 @@ void Application::mp2Run() {
 }
 
 /**
- * FUNCTION NAME: fail
- *
- * DESCRIPTION: This function controls the failure of nodes
- *
- * Note: this is used only by MP1
- */
-void Application::fail() {
-	int i, removed;
-
-	// fail half the members at time t=400
-	if (par->DROP_MSG && par->getcurrtime() == 50)
-	{
-		par->dropmsg = 1;
-	}
-
-	if (par->SINGLE_FAILURE && par->getcurrtime() == 100)
-	{
-		removed = (rand() % par->EN_GPSZ);
-		#ifdef DEBUGLOG
-		log->LOG(&mp1[removed]->getMemberNode()->addr,
-		         "Node failed at time=%d",
-						 par->getcurrtime());
-		#endif
-		mp1[removed]->getMemberNode()->failed = true;
-	}
-	else if (par->getcurrtime() == 100)
-	{
-		removed = rand() % par->EN_GPSZ/2;
-		for (i = removed; i < removed + par->EN_GPSZ/2; i++)
-		{
-			#ifdef DEBUGLOG
-			log->LOG(&mp1[i]->getMemberNode()->addr,
-			         "Node failed at time = %d",
-							 par->getcurrtime());
-			#endif
-			mp1[i]->getMemberNode()->failed = true;
-		}
-	}
-
-	if (par->DROP_MSG && par->getcurrtime() == 300)
-	{
-		par->dropmsg=0;
-	}
-
-}
-
-/**
  * FUNCTION NAME: getjoinaddr
  *
  * DESCRIPTION: This function returns the address of the coordinator
  */
-Address Application::getjoinaddr(void){
+Address Application::getjoinaddr(void)
+{
 	//trace.funcEntry("Application::getjoinaddr");
     Address joinaddr;
     joinaddr.init();
@@ -399,7 +351,7 @@ int Application::findARandomNodeThatIsAlive() {
 	int number;
 	do
 	{
-		number = (rand()%par->EN_GPSZ);
+		number = (rand()%par->NUM_PEERS);
 	} while (mp2[number]->getMemberNode()->failed);
 	return number;
 }
@@ -573,7 +525,7 @@ void Application::readTest() {
 		}
 
 		// Step 2.c Fail a replica
-		for (int i = 0; i < par->EN_GPSZ; i++)
+		for (int i = 0; i < par->NUM_PEERS; i++)
 		{
 			if (mp2[i]->getMemberNode()->addr.getAddress() ==
 			    replicas.at(replicaIdToFail).getAddress()->getAddress())
@@ -659,7 +611,7 @@ void Application::readTest() {
 				while (count != 2)
 				{
 					int i = 0;
-					while (i != par->EN_GPSZ)
+					while (i != par->NUM_PEERS)
 					{
 						if (mp2[i]->getMemberNode()->addr.getAddress() ==
 						    replicas.at(replicaIdToFail).getAddress()->getAddress())
@@ -765,7 +717,7 @@ void Application::readTest() {
 		// Step 4.b Find a non - replica for this key
 		replicas.clear();
 		replicas = mp2[number]->findNodes(it->first);
-		for ( int i = 0; i < par->EN_GPSZ; i++ )
+		for ( int i = 0; i < par->NUM_PEERS; i++ )
 		{
 			if (!mp2[i]->getMemberNode()->failed)
 			{
@@ -897,7 +849,7 @@ void Application::updateTest() {
 		}
 
 		// Step 2.c Fail a replica
-		for (int i = 0; i < par->EN_GPSZ; i++)
+		for (int i = 0; i < par->NUM_PEERS; i++)
 		{
 			if (mp2[i]->getMemberNode()->addr.getAddress() ==
 			    replicas.at(replicaIdToFail).getAddress()->getAddress())
@@ -982,7 +934,7 @@ void Application::updateTest() {
 				while (count != 2)
 				{
 					int i = 0;
-					while (i != par->EN_GPSZ)
+					while (i != par->NUM_PEERS)
 					{
 						if (mp2[i]->getMemberNode()->addr.getAddress() ==
 						    replicas.at(replicaIdToFail).getAddress()->getAddress())
@@ -1084,7 +1036,7 @@ void Application::updateTest() {
 		// Step 4.b Find a non - replica for this key
 		replicas.clear();
 		replicas = mp2[number]->findNodes(it->first);
-		for (int i = 0; i < par->EN_GPSZ; i++)
+		for (int i = 0; i < par->NUM_PEERS; i++)
 		{
 			if (!mp2[i]->getMemberNode()->failed)
 			{
