@@ -25,14 +25,32 @@ void handler(int sig) {
  * DESCRIPTION: main function. Start from here
  **********************************/
 int main(int argc, char *argv[]) {
-	//signal(SIGSEGV, handler);
-	if ( argc != ARGS_COUNT ) {
-		std::cout << "Configuration (i.e., *.conf) file File Required" << std::endl;
+  std::string usageString =
+	  "Incorrect Usage. Correct form: ./Application <test_file> [--debug]";
+
+	if (argc < 2 || argc > 4)
+	{
+		std::cout << usageString << std::endl;
 		return FAILURE;
 	}
 
+	bool debugMode = false;
+	if (argc == 3)
+	{
+		if (strcmp(argv[2], "--debug") == 0)
+		{
+			debugMode = true;
+		}
+		else
+		{
+			std::cout << usageString << std::endl;
+			return FAILURE;
+		}
+	}
+
 	// Create a new application object and run it.
-	std::unique_ptr<Application> app = std::make_unique<Application>(argv[1]);
+	std::unique_ptr<Application> app = std::make_unique<Application>(
+		argv[1], debugMode);
 	app->run();
 
 	return SUCCESS;
@@ -41,12 +59,12 @@ int main(int argc, char *argv[]) {
 /**
  * Constructor of the Application class
  */
-Application::Application(char *infile) {
+Application::Application(char *inputFile, bool debugMode) {
 	int i;
 	par = std::make_shared<Params>();
 	srand (time(NULL));
-	par->setparams(infile);
-	log = std::make_shared<Log>(par);
+	par->setparams(inputFile);
+	log = std::make_shared<Log>(par, debugMode);
 	en = std::make_shared<EmulNet>(par);
 	en1 = std::make_shared<EmulNet>(par);
 	mp1 = std::vector<std::unique_ptr<MP1Node>>(par->NUM_PEERS);
@@ -159,13 +177,11 @@ void Application::mp1Run() {
 		{
 			// handle messages and send heartbeats
 			mp1[i]->nodeLoop();
-			#ifdef DEBUGLOG
-			  if ((i == 0) && (par->globaltime % 500 == 0))
-			  {
-				  log->LOG(
-					  &mp1[i]->getMemberNode()->addr, "@@time=%d", par->getcurrtime());
-			  }
-			#endif
+			if ((i == 0) && (par->globaltime % 500 == 0))
+			{
+				log->LOG(
+					&mp1[i]->getMemberNode()->addr, "@@time=%d", par->getcurrtime());
+			}
 		}
 	}
 }

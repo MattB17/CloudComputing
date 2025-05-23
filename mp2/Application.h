@@ -57,9 +57,9 @@ private:
 	std::vector<std::unique_ptr<MP1Node>> mp1;
 	std::vector<std::unique_ptr<MP2Node>> mp2;
 	std::shared_ptr<Params> par;
-	map<string, string> testKVPairs;
+	std::map<string, string> testKVPairs;
 public:
-	Application(char *);
+	Application(char* inputFile, bool debugMode);
 	virtual ~Application();
 	Address getjoinaddr();
 	void initTestKVPairs();

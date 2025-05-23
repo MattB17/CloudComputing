@@ -9,7 +9,7 @@
 /**
  * Constructor
  */
-Log::Log(std::shared_ptr<Params> p)
+Log::Log(std::shared_ptr<Params> p, bool debug) : debugMode(debug)
 {
 	par = std::move(p);
 	firstTime = false;
@@ -22,6 +22,7 @@ Log::Log(const Log &anotherLog)
 {
 	this->par = anotherLog.par;
 	this->firstTime = anotherLog.firstTime;
+	this->debugMode = anotherLog.debugMode;
 }
 
 /**
@@ -31,6 +32,7 @@ Log& Log::operator = (const Log& anotherLog)
 {
 	this->par = anotherLog.par;
 	this->firstTime = anotherLog.firstTime;
+	this->debugMode = anotherLog.debugMode;
 	return *this;
 }
 
@@ -46,76 +48,78 @@ Log::~Log() {}
  */
 void Log::LOG(Address *addr, const char * str, ...)
 {
-	static FILE *fp;
-	static FILE *fp2;
-	va_list vararglist;
-	static char buffer[30000];
-	static int numwrites;
-	static char stdstring[30];
-	static char stdstring2[40];
-	static char stdstring3[40];
-	static int dbg_opened=0;
-
-	if (dbg_opened != 639)
+	if (debugMode)
 	{
-		numwrites=0;
+	  static FILE *fp;
+	  static FILE *fp2;
+	  va_list vararglist;
+	  static char buffer[30000];
+	  static int numwrites;
+	  static char stdstring[30];
+	  static char stdstring2[40];
+	  static char stdstring3[40];
+	  static int dbg_opened=0;
 
-		stdstring2[0]=0;
+	  if (dbg_opened != 639)
+	  {
+		  numwrites=0;
 
-		strcpy(stdstring3, stdstring2);
+		  stdstring2[0]=0;
 
-		strcat(stdstring2, DBG_LOG);
-		strcat(stdstring3, STATS_LOG);
+		  strcpy(stdstring3, stdstring2);
 
-		fp = fopen(stdstring2, "w");
-		fp2 = fopen(stdstring3, "w");
+		  strcat(stdstring2, DBG_LOG);
+		  strcat(stdstring3, STATS_LOG);
 
-		dbg_opened=639;
-	}
-	else
+		  fp = fopen(stdstring2, "w");
+		  fp2 = fopen(stdstring3, "w");
 
-	snprintf(stdstring, sizeof(stdstring), "%d.%d.%d.%d:%d ",
-	         addr->addr[0], addr->addr[1], addr->addr[2], addr->addr[3],
-					 *(short *)&addr->addr[4]);
+		  dbg_opened=639;
+	  }
+	  else
 
-	va_start(vararglist, str);
-	vsnprintf(buffer, sizeof(buffer), str, vararglist);
-	va_end(vararglist);
+	  snprintf(stdstring, sizeof(stdstring), "%d.%d.%d.%d:%d ",
+	           addr->addr[0], addr->addr[1], addr->addr[2], addr->addr[3],
+			  		 *(short *)&addr->addr[4]);
 
-	if (!firstTime)
-	{
-		int magicNumber = 0;
-		string magic = MAGIC_NUMBER;
-		int len = magic.length();
-		for (int i = 0; i < len; i++)
-		{
-			magicNumber += (int)magic.at(i);
-		}
-		fprintf(fp, "%x\n", magicNumber);
-		firstTime = true;
-	}
+	  va_start(vararglist, str);
+	  vsnprintf(buffer, sizeof(buffer), str, vararglist);
+	  va_end(vararglist);
 
-	if (memcmp(buffer, "#STATSLOG#", 10)==0)
-	{
-		fprintf(fp2, "\n %s", stdstring);
-		fprintf(fp2, "[%d] ", par->getcurrtime());
+	  if (!firstTime)
+	  {
+		  int magicNumber = 0;
+		  string magic = MAGIC_NUMBER;
+		  int len = magic.length();
+		  for (int i = 0; i < len; i++)
+		  {
+			  magicNumber += (int)magic.at(i);
+		  }
+		  fprintf(fp, "%x\n", magicNumber);
+		  firstTime = true;
+	  }
 
-		fprintf(fp2, "%s", buffer);
-	}
-	else
-	{
-		fprintf(fp, "\n %s", stdstring);
-		fprintf(fp, "[%d] ", par->getcurrtime());
-		fprintf(fp, "%s", buffer);
-	}
+	  if (memcmp(buffer, "#STATSLOG#", 10)==0)
+	  {
+		  fprintf(fp2, "\n %s", stdstring);
+		  fprintf(fp2, "[%d] ", par->getcurrtime());
 
-	if (++numwrites >= MAXWRITES)
-	{
-		fflush(fp);
-		fflush(fp2);
-		numwrites=0;
-	}
+		  fprintf(fp2, "%s", buffer);
+	  }
+	  else
+	  {
+		  fprintf(fp, "\n %s", stdstring);
+		  fprintf(fp, "[%d] ", par->getcurrtime());
+		  fprintf(fp, "%s", buffer);
+	  }
 
+	  if (++numwrites >= MAXWRITES)
+	  {
+		  fflush(fp);
+		  fflush(fp2);
+		  numwrites=0;
+	  }
+  }
 }
 
 /**

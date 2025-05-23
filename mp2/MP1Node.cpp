@@ -144,7 +144,9 @@ short AddressHandler::portFromAddress(Address *addr)
 	return *(short *)(&addr->addr[4]);
 }
 
-// TODO: implement GossipMessage
+const short MP1Node::tCleanup = 20;
+const short MP1Node::tFail = 10;
+const short MP1Node::tGossip = 2;
 
 /**
  * Overloaded Constructor of the MP1Node class
@@ -239,7 +241,7 @@ int MP1Node::initThisNode(Address *joinaddr) {
     // node is up!
 	memberNode->numNeighbours = 0;
 	memberNode->heartbeat = 0;
-	memberNode->pingCounter = TGOSSIP;
+	memberNode->pingCounter = MP1Node::tGossip;
   initMemberListTable();
 
   return 0;
@@ -410,15 +412,14 @@ void MP1Node::nodeLoopOps() {
 		sendGossip(activeNodes, gossipMsg);
 
 		// Reset the ping counter.
-		memberNode->pingCounter = TGOSSIP;
+		memberNode->pingCounter = MP1Node::tGossip;
 	}
   else
 	{
 		memberNode->pingCounter--;
 	}
 
-	// Remove any nodes that have not been updated in the last TCLEANUP
-	// time steps.
+	// Remove any nodes that have not been updated recently.
 	cleanMemberList();
 
 	return;
@@ -498,16 +499,14 @@ void MP1Node::addMembershipEntry(Address* newAddr, long newHeartbeat)
  *              `addr` amd the message `eventMsg`.
  */
 void MP1Node::logEvent(const char* eventMsg, Address* addr) {
-	#ifdef DEBUGLOG
-	  char logMsg[1024];
-	  snprintf(logMsg, sizeof(logMsg), eventMsg,
-					  addr->addr[0],
-					  addr->addr[1],
-					  addr->addr[2],
-					  addr->addr[3],
-					  addressHandler->portFromAddress(addr));
-	  log->LOG(&memberNode->addr, logMsg);
-	#endif
+	char logMsg[1024];
+	snprintf(logMsg, sizeof(logMsg), eventMsg,
+					 addr->addr[0],
+					 addr->addr[1],
+					 addr->addr[2],
+					 addr->addr[3],
+					 addressHandler->portFromAddress(addr));
+	log->LOG(&memberNode->addr, logMsg);
 }
 
 /**
@@ -516,17 +515,15 @@ void MP1Node::logEvent(const char* eventMsg, Address* addr) {
  * DESCRIPTION: logs a simple message given by `msg`.
  */
 void MP1Node::logMsg(const char* msg) {
-	#ifdef DEBUGLOG
-	  log->LOG(&memberNode->addr, msg);
-	#endif
+	log->LOG(&memberNode->addr, msg);
 }
 
 /**
  * FUNCTION NAME: cleanMemberList
  *
  * DESCRIPTION: cleans the member list by removing any entries for nodes that
- *              have been inactive for TCLEANUP time.
- *              The nodes removal is logged.
+ *              have been inactive for a while.
+ *              The nodes' removal is logged.
  */
 void MP1Node::cleanMemberList() {
 	std::vector<MemberListEntry> cleanedMemberList;
@@ -538,7 +535,7 @@ void MP1Node::cleanMemberList() {
 			&entryAddr, mle->getid(), mle->getport());
 		std::string entryAddrStr(entryAddr.addr);
 
-		if (par.getcurrtime() - mle->gettimestamp() <= TCLEANUP ||
+		if (par.getcurrtime() - mle->gettimestamp() <= MP1Node::tCleanup ||
 	      entryAddr == memberNode->addr)
 		{
 			memTableIdx[entryAddrStr] = cleanedMemberList.size();
@@ -567,7 +564,7 @@ std::vector<MemberListEntry> MP1Node::getActiveNodes() {
 			 itr != memberNode->memberList.end();
 			 itr++)
 	{
-		if ((par.getcurrtime() - itr->gettimestamp()) <= TFAIL) {
+		if ((par.getcurrtime() - itr->gettimestamp()) <= MP1Node::tFail) {
 			activeNodes.push_back(*itr);
 		}
 	}
@@ -635,7 +632,7 @@ void MP1Node::handleGossipMessage(char* gossipData,
 		{
 			MemberListEntry* currMle = &memberNode->memberList[currAddrIdx->second];
 			bool isActive = (
-				(par.getcurrtime() - currMle->gettimestamp()) <= TFAIL ||
+				(par.getcurrtime() - currMle->gettimestamp()) <= MP1Node::tFail ||
 			  currAddress == *senderAddr);
 			if (isActive && currHeartbeat > currMle->getheartbeat())
 			{
@@ -655,21 +652,19 @@ void MP1Node::printMemberTable()
 		Address mleAddress;
 		addressHandler->addressFromIdAndPort(
 			&mleAddress, mle->getid(), mle->getport());
-		#ifdef DEBUGLOG
-		  static char logMsg[1024];
-			snprintf(
-				logMsg,
-				sizeof(logMsg),
-				"Entry for %d.%d.%d.%d:%d with heartbeat %ld, last updated at %ld",
-				mleAddress.addr[0],
-				mleAddress.addr[1],
-				mleAddress.addr[2],
-				mleAddress.addr[3],
-				addressHandler->portFromAddress(&mleAddress),
-			  mle->getheartbeat(),
-			  mle->gettimestamp());
-			log->LOG(&memberNode->addr, logMsg);
-		#endif
+		static char logMsg[1024];
+	  snprintf(
+			logMsg,
+			sizeof(logMsg),
+			"Entry for %d.%d.%d.%d:%d with heartbeat %ld, last updated at %ld",
+			mleAddress.addr[0],
+			mleAddress.addr[1],
+			mleAddress.addr[2],
+			mleAddress.addr[3],
+			addressHandler->portFromAddress(&mleAddress),
+			mle->getheartbeat(),
+			mle->gettimestamp());
+	  log->LOG(&memberNode->addr, logMsg);
 	}
 }
 

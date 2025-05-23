@@ -14,18 +14,6 @@
 #include "Member.h"
 #include "EmulNet.h"
 #include "Queue.h"
-#include <unordered_map>
-
-/**
- * Macros
- */
-#define TCLEANUP 20
-#define TFAIL 10
-#define TGOSSIP 1
-
-/*
- * Note: You can change/add any functions in MP1Node.{h,cpp}
- */
 
 /**
  * Message Types
@@ -47,7 +35,7 @@ enum MsgTypes{
  */
 typedef struct MessageHdr {
 	enum MsgTypes msgType;
-}MessageHdr;
+} MessageHdr;
 
 /**
  * CLASS NAME: JoinMessage
@@ -63,9 +51,7 @@ public:
   JoinMessage(Address* fromAddr, MsgTypes&& joinType, long* heartbeat);
   ~JoinMessage();
   char* getMessage();
-  size_t getMessageSize() {
-    return msgSize;
-  }
+  size_t getMessageSize() { return msgSize; }
 };
 
 /**
@@ -83,9 +69,7 @@ public:
   GossipMessage(Address* fromAddr, std::vector<MemberListEntry>& memTable);
   ~GossipMessage();
   char* getMessage();
-  size_t getMessageSize() {
-    return msgSize;
-  }
+  size_t getMessageSize() { return msgSize; }
 };
 
 /**
@@ -119,6 +103,10 @@ private:
   double gossipProp;
   std::unordered_map<std::string, size_t> memTableIdx;
   std::string addrStr;
+
+  static const short tCleanup;
+  static const short tFail;
+  static const short tGossip;
 
   void logEvent(const char* eventMsg, Address* addr);
   void logMsg(const char* msg);
