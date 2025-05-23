@@ -1119,7 +1119,8 @@ void MP2Node::logWriteSuccess(int transId)
 				txnPointer->second.getKey());
 			break;
 		default:
-		  this->log->LOG(&(this->memberNode->addr), "Unsupported transaction type");
+		  this->log->logDebug(
+				&(this->memberNode->addr), "Unsupported transaction type");
 			break;
 	}
 }
@@ -1164,7 +1165,8 @@ void MP2Node::logWriteFailure(int transId)
 				txnPointer->second.getKey());
 			break;
 		default:
-		  this->log->LOG(&(this->memberNode->addr), "Unsupported transaction type");
+		  this->log->logDebug(
+				&(this->memberNode->addr), "Unsupported transaction type");
 			break;
 	}
 }

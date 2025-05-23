@@ -30,6 +30,7 @@ private:
 	std::shared_ptr<Params> par;
 	bool firstTime;
 	bool debugMode;
+
 public:
 	Log(std::shared_ptr<Params> p, bool debug);
 	Log(const Log &anotherLog);
@@ -37,7 +38,8 @@ public:
 	virtual ~Log();
 
 	// Generic logging method.
-	void LOG(Address *, const char * str, ...);
+	void logDebug(Address *, const char * str);
+	void unconditionalLog(Address *, const char * str, ...);
 
 	// Failure detection logging
 	void logNodeAdd(Address *, Address *);

@@ -81,8 +81,8 @@ Application::Application(char *inputFile, bool debugMode) {
 			memberNode, *par, en, log, addressOfMemberNode);
 		mp2[i] = std::make_unique<MP2Node>(
 			memberNode, *par, en1, log, addressOfMemberNode);
-		log->LOG(&(mp1[i]->getMemberNode()->addr), "APP");
-		log->LOG(&(mp2[i]->getMemberNode()->addr), "APP MP2");
+		log->logDebug(&(mp1[i]->getMemberNode()->addr), "APP");
+		log->logDebug(&(mp2[i]->getMemberNode()->addr), "APP MP2");
 	}
 }
 
@@ -179,7 +179,7 @@ void Application::mp1Run() {
 			mp1[i]->nodeLoop();
 			if ((i == 0) && (par->globaltime % 500 == 0))
 			{
-				log->LOG(
+				log->unconditionalLog(
 					&mp1[i]->getMemberNode()->addr, "@@time=%d", par->getcurrtime());
 			}
 		}
@@ -417,11 +417,11 @@ void Application::insertTestKVPairs() {
 		number = findARandomNodeThatIsAlive();
 
 		// Step 2. Issue a create operation
-		log->LOG(&mp2[number]->getMemberNode()->addr,
-		         "CREATE OPERATION KEY: %s VALUE: %s at time: %d",
-						 it->first.c_str(),
-						 it->second.c_str(),
-						 par->getcurrtime());
+		log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+		                      "CREATE OPERATION KEY: %s VALUE: %s at time: %d",
+						              it->first.c_str(),
+						              it->second.c_str(),
+						              par->getcurrtime());
 		mp2[number]->clientCreate(it->first, it->second);
 	}
 
@@ -452,7 +452,7 @@ void Application::deleteTest() {
 		number = findARandomNodeThatIsAlive();
 
 		// Step 1.b. Issue a delete operation
-		log->LOG(
+		log->unconditionalLog(
 			&mp2[number]->getMemberNode()->addr,
 			"DELETE OPERATION KEY: %s VALUE: %s at time: %d",
 			it->first.c_str(),
@@ -471,10 +471,10 @@ void Application::deleteTest() {
 	number = findARandomNodeThatIsAlive();
 
 	// Step 2.b. Issue a delete operation
-	log->LOG(&mp2[number]->getMemberNode()->addr,
-	         "DELETE OPERATION KEY: %s at time: %d",
-					 invalidKey.c_str(),
-					 par->getcurrtime());
+	log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+	                      "DELETE OPERATION KEY: %s at time: %d",
+					              invalidKey.c_str(),
+					              par->getcurrtime());
 	mp2[number]->clientDelete(invalidKey);
 }
 
@@ -505,11 +505,11 @@ void Application::readTest() {
 
 		// Step 1.b Do a read operation
 		std::cout << std::endl << "Reading a valid key.... ... .. . ." << std::endl;
-		log->LOG(&mp2[number]->getMemberNode()->addr,
-		         "READ OPERATION KEY: %s VALUE: %s at time: %d",
-						 it->first.c_str(),
-						 it->second.c_str(),
-						 par->getcurrtime());
+		log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+		                      "READ OPERATION KEY: %s VALUE: %s at time: %d",
+						              it->first.c_str(),
+						              it->second.c_str(),
+						              par->getcurrtime());
 		mp2[number]->clientRead(it->first);
 	}
 
@@ -534,9 +534,9 @@ void Application::readTest() {
 			std::cout << "Could not find at least quorum replicas for this key. ";
 			std::cout << "Exiting!!! size of replicas vector: ";
 			std::cout << replicas.size() << std::endl;
-			log->LOG(&mp2[number]->getMemberNode()->addr,
-			         "Could not find at least quorum replicas for this key. Exiting!!! size of replicas vector: %d",
-							 replicas.size());
+			log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+			                      "Could not find at least quorum replicas for this key. Exiting!!! size of replicas vector: %d",
+							              replicas.size());
 			exit(1);
 		}
 
@@ -568,9 +568,9 @@ void Application::readTest() {
 		}
 		if (failedOneNode)
 		{
-			log->LOG(&mp2[nodeToFail]->getMemberNode()->addr,
-			         "Node failed at time=%d",
-							 par->getcurrtime());
+			log->unconditionalLog(&mp2[nodeToFail]->getMemberNode()->addr,
+			                      "Node failed at time=%d",
+							              par->getcurrtime());
 			mp2[nodeToFail]->getMemberNode()->failed = true;
 			mp1[nodeToFail]->getMemberNode()->failed = true;
 			std::cout << std::endl << "Failed a replica node" << std::endl;
@@ -578,7 +578,8 @@ void Application::readTest() {
 		else
 		{
 			// The code can never reach here
-			log->LOG(&mp2[number]->getMemberNode()->addr, "Could not fail a node");
+			log->unconditionalLog(
+				&mp2[number]->getMemberNode()->addr, "Could not fail a node");
 			std::cout << "Could not fail a node. Exiting!!!" << std::endl;
 			exit(1);
 		}
@@ -587,11 +588,11 @@ void Application::readTest() {
 
 		// Step 2.d Issue a read
 		std::cout << std::endl << "Reading a valid key.... ... .. . ." << std::endl;
-		log->LOG(&mp2[number]->getMemberNode()->addr,
-		         "READ OPERATION KEY: %s VALUE: %s at time: %d",
-						 it->first.c_str(),
-						 it->second.c_str(),
-						 par->getcurrtime());
+		log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+		                      "READ OPERATION KEY: %s VALUE: %s at time: %d",
+						              it->first.c_str(),
+						              it->second.c_str(),
+						              par->getcurrtime());
 		mp2[number]->clientRead(it->first);
 
 		failedOneNode = false;
@@ -666,9 +667,9 @@ void Application::readTest() {
 				for (int i = 0; i < nodesToFail.size(); i++)
 				{
 					// Fail a node
-					log->LOG(&mp2[nodesToFail.at(i)]->getMemberNode()->addr,
-					         "Node failed at time=%d",
-									 par->getcurrtime());
+					log->unconditionalLog(&mp2[nodesToFail.at(i)]->getMemberNode()->addr,
+					                      "Node failed at time=%d",
+									              par->getcurrtime());
 					mp2[nodesToFail.at(i)]->getMemberNode()->failed = true;
 					mp1[nodesToFail.at(i)]->getMemberNode()->failed = true;
 					std::cout << std::endl << "Failed a replica node" << std::endl;
@@ -677,9 +678,8 @@ void Application::readTest() {
 			else
 			{
 				// The code can never reach here
-				log->LOG(&mp2[number]->getMemberNode()->addr,
-				         "Could not fail two nodes");
-				//cout<<"COUNT: " <<count;
+				log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+				                      "Could not fail two nodes");
 				std::cout << "Could not fail two nodes. Exiting!!!";
 				exit(1);
 			}
@@ -689,11 +689,11 @@ void Application::readTest() {
 			// Step 3.c Issue a read
 			std::cout << std::endl;
 			std::cout << "Reading a valid key.... ... .. . ." << std::endl;
-			log->LOG(&mp2[number]->getMemberNode()->addr,
-			         "READ OPERATION KEY: %s VALUE: %s at time: %d",
-							 it->first.c_str(),
-							 it->second.c_str(),
-							 par->getcurrtime());
+			log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+			                      "READ OPERATION KEY: %s VALUE: %s at time: %d",
+							              it->first.c_str(),
+							              it->second.c_str(),
+							              par->getcurrtime());
 			// This read should fail since at least quorum nodes are not alive
 			mp2[number]->clientRead(it->first);
 		}
@@ -709,11 +709,11 @@ void Application::readTest() {
 			// Step 3.e Issue a read
 			std::cout << std::endl;
 			std::cout << "Reading a valid key.... ... .. . ." << std::endl;
-			log->LOG(&mp2[number]->getMemberNode()->addr,
-			         "READ OPERATION KEY: %s VALUE: %s at time: %d",
-							 it->first.c_str(),
-							 it->second.c_str(),
-							 par->getcurrtime());
+			log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+			                      "READ OPERATION KEY: %s VALUE: %s at time: %d",
+							              it->first.c_str(),
+							              it->second.c_str(),
+							              par->getcurrtime());
 			// This read should be successful
 			mp2[number]->clientRead(it->first);
 		}
@@ -743,9 +743,9 @@ void Application::readTest() {
 					 memberAddr != replicas.at(TERTIARY).getAddress()->getAddress())
 				{
 					// Step 4.c Fail a non-replica node
-					log->LOG(&mp2[i]->getMemberNode()->addr,
-					         "Node failed at time=%d",
-									 par->getcurrtime());
+					log->unconditionalLog(&mp2[i]->getMemberNode()->addr,
+					                      "Node failed at time=%d",
+									              par->getcurrtime());
 					mp2[i]->getMemberNode()->failed = true;
 					mp1[i]->getMemberNode()->failed = true;
 					failedOneNode = true;
@@ -756,8 +756,8 @@ void Application::readTest() {
 		}
 		if (!failedOneNode) {
 			// The code can never reach here
-			log->LOG(&mp2[number]->getMemberNode()->addr,
-			         "Could not fail a node(non-replica)");
+			log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+			                      "Could not fail a node(non-replica)");
 			std::cout << "Could not fail a node(non-replica). Exiting!!!" << std::endl;
 			exit(1);
 		}
@@ -766,11 +766,11 @@ void Application::readTest() {
 
 		// Step 4.d Issue a read operation
 		std::cout << endl << "Reading a valid key.... ... .. . ." << std::endl;
-		log->LOG(&mp2[number]->getMemberNode()->addr,
-		         "READ OPERATION KEY: %s VALUE: %s at time: %d",
-						 it->first.c_str(),
-						 it->second.c_str(),
-						 par->getcurrtime());
+		log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+		                      "READ OPERATION KEY: %s VALUE: %s at time: %d",
+						              it->first.c_str(),
+						              it->second.c_str(),
+						              par->getcurrtime());
 		// This read should fail since at least quorum nodes are not alive
 		mp2[number]->clientRead(it->first);
 	}
@@ -790,10 +790,10 @@ void Application::readTest() {
 		// Step 5.b Issue a read operation
 		std::cout << std::endl;
 		std::cout << "Reading an invalid key.... ... .. . ." << std::endl;
-		log->LOG(&mp2[number]->getMemberNode()->addr,
-		         "READ OPERATION KEY: %s at time: %d",
-						 invalidKey.c_str(),
-						 par->getcurrtime());
+		log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+		                      "READ OPERATION KEY: %s at time: %d",
+						              invalidKey.c_str(),
+						              par->getcurrtime());
 		// This read should fail since at least quorum nodes are not alive
 		mp2[number]->clientRead(invalidKey);
 	}
@@ -829,11 +829,11 @@ void Application::updateTest() {
 		// Step 1.b Do a update operation
 		std::cout << std::endl;
 		std::cout << "Updating a valid key.... ... .. . ." << std::endl;
-		log->LOG(&mp2[number]->getMemberNode()->addr,
-		         "UPDATE OPERATION KEY: %s VALUE: %s at time: %d",
-						 it->first.c_str(),
-						 newValue.c_str(),
-						 par->getcurrtime());
+		log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+		                      "UPDATE OPERATION KEY: %s VALUE: %s at time: %d",
+						              it->first.c_str(),
+						              newValue.c_str(),
+						              par->getcurrtime());
 		mp2[number]->clientUpdate(it->first, newValue);
 	}
 
@@ -854,9 +854,9 @@ void Application::updateTest() {
 		// if quorum replicas are not found then exit
 		if (replicas.size() < RF-1)
 		{
-			log->LOG(&mp2[number]->getMemberNode()->addr,
-			         "Could not find at least quorum replicas for this key. Exiting!!! size of replicas vector: %d",
-							 replicas.size());
+			log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+			                      "Could not find at least quorum replicas for this key. Exiting!!! size of replicas vector: %d",
+							              replicas.size());
 			std::cout << std::endl;
 			std::cout << "Could not find at least quorum replicas for this key. ";
 			std::cout << "Exiting!!! size of replicas vector: ";
@@ -892,9 +892,9 @@ void Application::updateTest() {
 		}
 		if (failedOneNode)
 		{
-			log->LOG(&mp2[nodeToFail]->getMemberNode()->addr,
-			         "Node failed at time=%d",
-							 par->getcurrtime());
+			log->unconditionalLog(&mp2[nodeToFail]->getMemberNode()->addr,
+			                      "Node failed at time=%d",
+							              par->getcurrtime());
 			mp2[nodeToFail]->getMemberNode()->failed = true;
 			mp1[nodeToFail]->getMemberNode()->failed = true;
 			std::cout << std::endl << "Failed a replica node" << std::endl;
@@ -902,7 +902,8 @@ void Application::updateTest() {
 		else
 		{
 			// The code can never reach here
-			log->LOG(&mp2[number]->getMemberNode()->addr, "Could not fail a node");
+			log->unconditionalLog(
+				&mp2[number]->getMemberNode()->addr, "Could not fail a node");
 			std::cout << "Could not fail a node. Exiting!!!" << std::endl;
 			exit(1);
 		}
@@ -912,11 +913,11 @@ void Application::updateTest() {
 		// Step 2.d Issue a update
 		std::cout << std::endl;
 		std::cout << "Updating a valid key.... ... .. . ." << std::endl;
-		log->LOG(&mp2[number]->getMemberNode()->addr,
-		         "UPDATE OPERATION KEY: %s VALUE: %s at time: %d",
-						 it->first.c_str(),
-						 newValue.c_str(),
-						 par->getcurrtime());
+		log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+		                      "UPDATE OPERATION KEY: %s VALUE: %s at time: %d",
+						              it->first.c_str(),
+						              newValue.c_str(),
+						              par->getcurrtime());
 		mp2[number]->clientUpdate(it->first, newValue);
 
 		failedOneNode = false;
@@ -986,9 +987,9 @@ void Application::updateTest() {
 				for (int i = 0; i < nodesToFail.size(); i++)
 				{
 					// Fail a node
-					log->LOG(&mp2[nodesToFail.at(i)]->getMemberNode()->addr,
-					         "Node failed at time=%d",
-									 par->getcurrtime());
+					log->unconditionalLog(&mp2[nodesToFail.at(i)]->getMemberNode()->addr,
+					                      "Node failed at time=%d",
+									              par->getcurrtime());
 					mp2[nodesToFail.at(i)]->getMemberNode()->failed = true;
 					mp1[nodesToFail.at(i)]->getMemberNode()->failed = true;
 					std::cout << std::endl << "Failed a replica node" << std::endl;
@@ -997,8 +998,8 @@ void Application::updateTest() {
 			else
 			{
 				// The code can never reach here
-				log->LOG(&mp2[number]->getMemberNode()->addr,
-				         "Could not fail two nodes");
+				log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+				                      "Could not fail two nodes");
 				std::cout << "Could not fail two nodes. Exiting!!!" << std::endl;
 				exit(1);
 			}
@@ -1008,11 +1009,11 @@ void Application::updateTest() {
 			// Step 3.c Issue an update
 			std::cout << std::endl;
 			std::cout << "Updating a valid key.... ... .. . ." << std::endl;
-			log->LOG(&mp2[number]->getMemberNode()->addr,
-			         "UPDATE OPERATION KEY: %s VALUE: %s at time: %d",
-							 it->first.c_str(),
-							 newValue.c_str(),
-							 par->getcurrtime());
+			log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+			                      "UPDATE OPERATION KEY: %s VALUE: %s at time: %d",
+							              it->first.c_str(),
+							              newValue.c_str(),
+							              par->getcurrtime());
 			// This update should fail since at least quorum nodes are not alive
 			mp2[number]->clientUpdate(it->first, newValue);
 		}
@@ -1028,11 +1029,11 @@ void Application::updateTest() {
 			// Step 3.e Issue a update
 			std::cout << std::endl;
 			std::cout << "Updating a valid key.... ... .. . ." << std::endl;
-			log->LOG(&mp2[number]->getMemberNode()->addr,
-			         "UPDATE OPERATION KEY: %s VALUE: %s at time: %d",
-							 it->first.c_str(),
-							 newValue.c_str(),
-							 par->getcurrtime());
+			log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+			                      "UPDATE OPERATION KEY: %s VALUE: %s at time: %d",
+							              it->first.c_str(),
+							              newValue.c_str(),
+							              par->getcurrtime());
 			// This update should be successful
 			mp2[number]->clientUpdate(it->first, newValue);
 		}
@@ -1062,9 +1063,9 @@ void Application::updateTest() {
 					  memberAddr != replicas.at(TERTIARY).getAddress()->getAddress())
 				{
 					// Step 4.c Fail a non-replica node
-					log->LOG(&mp2[i]->getMemberNode()->addr,
-					         "Node failed at time=%d",
-									 par->getcurrtime());
+					log->unconditionalLog(&mp2[i]->getMemberNode()->addr,
+					                      "Node failed at time=%d",
+									              par->getcurrtime());
 					mp2[i]->getMemberNode()->failed = true;
 					mp1[i]->getMemberNode()->failed = true;
 					failedOneNode = true;
@@ -1077,8 +1078,8 @@ void Application::updateTest() {
 		if (!failedOneNode)
 		{
 			// The code can never reach here
-			log->LOG(&mp2[number]->getMemberNode()->addr,
-			         "Could not fail a node(non-replica)");
+			log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+			                      "Could not fail a node(non-replica)");
 			std::cout << "Could not fail a node(non-replica). Exiting!!!";
 			std::cout << std::endl;
 			exit(1);
@@ -1089,11 +1090,11 @@ void Application::updateTest() {
 		// Step 4.d Issue a update operation
 		std::cout << std::endl;
 		std::cout << "Updating a valid key.... ... .. . ." << std::endl;
-		log->LOG(&mp2[number]->getMemberNode()->addr,
-		         "UPDATE OPERATION KEY: %s VALUE: %s at time: %d",
-						 it->first.c_str(),
-						 newValue.c_str(),
-						 par->getcurrtime());
+		log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+		                      "UPDATE OPERATION KEY: %s VALUE: %s at time: %d",
+						              it->first.c_str(),
+						              newValue.c_str(),
+						              par->getcurrtime());
 		// This read should fail since at least quorum nodes are not alive
 		mp2[number]->clientUpdate(it->first, newValue);
 	}
@@ -1114,11 +1115,11 @@ void Application::updateTest() {
 		// Step 5.b Issue a read operation
 		std::cout << std::endl;
 		std::cout << "Updating a valid key.... ... .. . ." << std::endl;
-		log->LOG(&mp2[number]->getMemberNode()->addr,
-		         "UPDATE OPERATION KEY: %s VALUE: %s at time: %d",
-						 invalidKey.c_str(),
-						 invalidValue.c_str(),
-						 par->getcurrtime());
+		log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
+		                      "UPDATE OPERATION KEY: %s VALUE: %s at time: %d",
+						              invalidKey.c_str(),
+						              invalidValue.c_str(),
+						              par->getcurrtime());
 		// This read should fail since at least quorum nodes are not alive
 		mp2[number]->clientUpdate(invalidKey, invalidValue);
 	}

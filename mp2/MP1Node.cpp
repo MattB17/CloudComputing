@@ -506,7 +506,7 @@ void MP1Node::logEvent(const char* eventMsg, Address* addr) {
 					 addr->addr[2],
 					 addr->addr[3],
 					 addressHandler->portFromAddress(addr));
-	log->LOG(&memberNode->addr, logMsg);
+	log->logDebug(&memberNode->addr, logMsg);
 }
 
 /**
@@ -515,7 +515,7 @@ void MP1Node::logEvent(const char* eventMsg, Address* addr) {
  * DESCRIPTION: logs a simple message given by `msg`.
  */
 void MP1Node::logMsg(const char* msg) {
-	log->LOG(&memberNode->addr, msg);
+	log->logDebug(&memberNode->addr, msg);
 }
 
 /**
@@ -664,7 +664,7 @@ void MP1Node::printMemberTable()
 			addressHandler->portFromAddress(&mleAddress),
 			mle->getheartbeat(),
 			mle->gettimestamp());
-	  log->LOG(&memberNode->addr, logMsg);
+	  log->logDebug(&memberNode->addr, logMsg);
 	}
 }
 

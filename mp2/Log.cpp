@@ -41,85 +41,90 @@ Log& Log::operator = (const Log& anotherLog)
  */
 Log::~Log() {}
 
+void Log::logDebug(Address *addr, const char *str)
+{
+	if (this->debugMode)
+	{
+	  this->unconditionalLog(addr, str);
+	}
+}
+
 /**
  * FUNCTION NAME: LOG
  *
  * DESCRIPTION: Print out to file dbg.log, along with Address of node.
  */
-void Log::LOG(Address *addr, const char * str, ...)
+void Log::unconditionalLog(Address *addr, const char * str, ...)
 {
-	if (debugMode)
+	static FILE *fp;
+	static FILE *fp2;
+	va_list vararglist;
+	static char buffer[30000];
+	static int numwrites;
+	static char stdstring[30];
+	static char stdstring2[40];
+	static char stdstring3[40];
+	static int dbg_opened=0;
+
+	if (dbg_opened != 639)
 	{
-	  static FILE *fp;
-	  static FILE *fp2;
-	  va_list vararglist;
-	  static char buffer[30000];
-	  static int numwrites;
-	  static char stdstring[30];
-	  static char stdstring2[40];
-	  static char stdstring3[40];
-	  static int dbg_opened=0;
+		numwrites=0;
 
-	  if (dbg_opened != 639)
-	  {
-		  numwrites=0;
+		stdstring2[0]=0;
 
-		  stdstring2[0]=0;
+		strcpy(stdstring3, stdstring2);
 
-		  strcpy(stdstring3, stdstring2);
+		strcat(stdstring2, DBG_LOG);
+		strcat(stdstring3, STATS_LOG);
 
-		  strcat(stdstring2, DBG_LOG);
-		  strcat(stdstring3, STATS_LOG);
+		fp = fopen(stdstring2, "w");
+		fp2 = fopen(stdstring3, "w");
 
-		  fp = fopen(stdstring2, "w");
-		  fp2 = fopen(stdstring3, "w");
+		dbg_opened=639;
+	}
+	else
 
-		  dbg_opened=639;
-	  }
-	  else
+	snprintf(stdstring, sizeof(stdstring), "%d.%d.%d.%d:%d ",
+	         addr->addr[0], addr->addr[1], addr->addr[2], addr->addr[3],
+			     *(short *)&addr->addr[4]);
 
-	  snprintf(stdstring, sizeof(stdstring), "%d.%d.%d.%d:%d ",
-	           addr->addr[0], addr->addr[1], addr->addr[2], addr->addr[3],
-			  		 *(short *)&addr->addr[4]);
+	va_start(vararglist, str);
+	vsnprintf(buffer, sizeof(buffer), str, vararglist);
+	va_end(vararglist);
 
-	  va_start(vararglist, str);
-	  vsnprintf(buffer, sizeof(buffer), str, vararglist);
-	  va_end(vararglist);
+	if (!firstTime)
+	{
+		int magicNumber = 0;
+		string magic = MAGIC_NUMBER;
+		int len = magic.length();
+		for (int i = 0; i < len; i++)
+		{
+			magicNumber += (int)magic.at(i);
+		}
+		fprintf(fp, "%x\n", magicNumber);
+		firstTime = true;
+	}
 
-	  if (!firstTime)
-	  {
-		  int magicNumber = 0;
-		  string magic = MAGIC_NUMBER;
-		  int len = magic.length();
-		  for (int i = 0; i < len; i++)
-		  {
-			  magicNumber += (int)magic.at(i);
-		  }
-		  fprintf(fp, "%x\n", magicNumber);
-		  firstTime = true;
-	  }
+	if (memcmp(buffer, "#STATSLOG#", 10)==0)
+	{
+		fprintf(fp2, "\n %s", stdstring);
+		fprintf(fp2, "[%d] ", par->getcurrtime());
 
-	  if (memcmp(buffer, "#STATSLOG#", 10)==0)
-	  {
-		  fprintf(fp2, "\n %s", stdstring);
-		  fprintf(fp2, "[%d] ", par->getcurrtime());
+		fprintf(fp2, "%s", buffer);
+	}
+	else
+	{
+		fprintf(fp, "\n %s", stdstring);
+		fprintf(fp, "[%d] ", par->getcurrtime());
+		fprintf(fp, "%s", buffer);
+	}
 
-		  fprintf(fp2, "%s", buffer);
-	  }
-	  else
-	  {
-		  fprintf(fp, "\n %s", stdstring);
-		  fprintf(fp, "[%d] ", par->getcurrtime());
-		  fprintf(fp, "%s", buffer);
-	  }
-
-	  if (++numwrites >= MAXWRITES)
-	  {
-		  fflush(fp);
-		  fflush(fp2);
-		  numwrites=0;
-	  }
-  }
+	if (++numwrites >= MAXWRITES)
+	{
+		fflush(fp);
+		fflush(fp2);
+		numwrites=0;
+	}
 }
 
 /**
@@ -135,7 +140,7 @@ void Log::logNodeAdd(Address *thisNode, Address *addedAddr)
 					 addedAddr->addr[0], addedAddr->addr[1], addedAddr->addr[2],
 					 addedAddr->addr[3], *(short *)&addedAddr->addr[4],
 					 par->getcurrtime());
-  LOG(thisNode, stdstring);
+  unconditionalLog(thisNode, stdstring);
 }
 
 /**
@@ -151,7 +156,7 @@ void Log::logNodeRemove(Address *thisNode, Address *removedAddr)
 					removedAddr->addr[0], removedAddr->addr[1], removedAddr->addr[2],
 					removedAddr->addr[3], *(short *)&removedAddr->addr[4],
 					par->getcurrtime());
-  LOG(thisNode, stdstring);
+  unconditionalLog(thisNode, stdstring);
 }
 
 /**
@@ -179,7 +184,7 @@ void Log::logCreateSuccess(Address * address,
 	         "%s: create success at time %d, transID=%d, key=%s, value=%s",
 					 str.c_str(), par->getcurrtime(), transID,
 					 key.c_str(), value.c_str());
-  LOG(address, stdstring);
+  unconditionalLog(address, stdstring);
 }
 
 /**
@@ -207,7 +212,7 @@ void Log::logReadSuccess(Address * address,
 	         "%s: read success at time %d, transID=%d, key=%s, value=%s",
 					 str.c_str(), par->getcurrtime(), transID,
 					 key.c_str(), value.c_str());
-  LOG(address, stdstring);
+  unconditionalLog(address, stdstring);
 }
 
 /**
@@ -235,7 +240,7 @@ void Log::logUpdateSuccess(Address * address,
 	        "%s: update success at time %d, transID=%d, key=%s, value=%s",
 					str.c_str(), par->getcurrtime(), transID,
 					key.c_str(), newValue.c_str());
-  LOG(address, stdstring);
+  unconditionalLog(address, stdstring);
 }
 
 /**
@@ -261,7 +266,7 @@ void Log::logDeleteSuccess(Address * address,
 	snprintf(stdstring, sizeof(stdstring),
 	         "%s: delete success at time %d, transID=%d, key=%s",
 					 str.c_str(), par->getcurrtime(), transID, key.c_str());
-  LOG(address, stdstring);
+  unconditionalLog(address, stdstring);
 }
 
 /**
@@ -289,7 +294,7 @@ void Log::logCreateFail(Address * address,
 	         "%s: create fail at time %d, transID=%d, key=%s, value=%s",
 					 str.c_str(), par->getcurrtime(), transID,
 					 key.c_str(), value.c_str());
-  LOG(address, stdstring);
+  unconditionalLog(address, stdstring);
 }
 
 
@@ -316,7 +321,7 @@ void Log::logReadFail(Address * address,
 	snprintf(stdstring, sizeof(stdstring),
 	         "%s: read fail at time %d, transID=%d, key=%s",
 					 str.c_str(), par->getcurrtime(), transID, key.c_str());
-  LOG(address, stdstring);
+  unconditionalLog(address, stdstring);
 }
 
 /**
@@ -344,7 +349,7 @@ void Log::logUpdateFail(Address * address,
 	         "%s: update fail at time %d, transID=%d, key=%s, value=%s",
 					 str.c_str(), par->getcurrtime(), transID,
 					 key.c_str(), newValue.c_str());
-  LOG(address, stdstring);
+  unconditionalLog(address, stdstring);
 }
 
 /**
@@ -370,5 +375,5 @@ void Log::logDeleteFail(Address * address,
 	snprintf(stdstring, sizeof(stdstring),
 	         "%s: delete fail at time %d, transID=%d, key=%s",
 					 str.c_str(), par->getcurrtime(), transID, key.c_str());
-  LOG(address, stdstring);
+  unconditionalLog(address, stdstring);
 }

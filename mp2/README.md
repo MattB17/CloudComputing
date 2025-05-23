@@ -24,9 +24,11 @@ To build the project run:
 * `make clean`
 * `make`
 
-This will create a binary called `Application` which we can then run a testcase as:
-* `./Application testcases/<testcase-file>`
-* where `<testcase-file>` is one of the files in the `testcases` folder
+This will create a binary called `Application` which we can then run a testcase as either:
+* with minimal log messages: `./Application testcases/<testcase-file>`
+* in debug mode: `./Application testcases/<testcase-file> --debug`
+
+Where `<testcase-file>` is one of the files in the `testcases` folder
 
 To run the Coursera grader and see the performance of all tests cases execute the following:
 * `python ./KVStoreGrader.sh`
