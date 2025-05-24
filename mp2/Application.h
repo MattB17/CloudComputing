@@ -8,6 +8,7 @@
 #define _APPLICATION_H_
 
 #include "stdincludes.h"
+#include "Address.h"
 #include "MP1Node.h"
 #include "Log.h"
 #include "Params.h"

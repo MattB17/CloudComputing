@@ -8,7 +8,18 @@
 #define QUEUE_H_
 
 #include "stdincludes.h"
-#include "Member.h"
+
+/**
+ * CLASS NAME: q_elt
+ *
+ * DESCRIPTION: Entry in the queue
+ */
+class q_elt {
+public:
+	void *elt;
+	int size;
+	q_elt(void *elt, int size): elt(elt), size(size) {}
+};
 
 /**
  * Class name: Queue

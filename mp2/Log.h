@@ -9,6 +9,7 @@
 
 #include "stdincludes.h"
 #include "Params.h"
+#include "Address.h"
 #include "Member.h"
 
 /*

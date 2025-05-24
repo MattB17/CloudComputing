@@ -11,6 +11,7 @@
 #include "stdincludes.h"
 #include "Log.h"
 #include "Params.h"
+#include "Address.h"
 #include "Member.h"
 #include "EmulNet.h"
 #include "Queue.h"
@@ -70,21 +71,6 @@ public:
   ~GossipMessage();
   char* getMessage();
   size_t getMessageSize() { return msgSize; }
-};
-
-/**
- * CLASS NAME: AddressHandler
- *
- * DESCRIPTION: Handles address low level operations.
- *              Used primarily for mapping from an address to id and port and
- *              vice versa.
- */
-class AddressHandler {
-public:
-  AddressHandler() {}
-  void addressFromIdAndPort(Address* addr, int id, short port);
-  int idFromAddress(Address* addr);
-  short portFromAddress(Address* addr);
 };
 
 /**

@@ -112,38 +112,6 @@ char* GossipMessage::getMessage()
 	return (char *) msg;
 }
 
-/**
- * FUNCTION NAME: addressFromIdAndPort
- *
- * DESCRIPTION: builds Address `addr` from the supplied `id` and `port`.
- */
-void AddressHandler::addressFromIdAndPort(Address* addr, int id, short port)
-{
-	*(int *)(addr->addr) = id;
-	*(short *)(&addr->addr[4]) = port;
-	return;
-}
-
-/**
- * FUNCTION NAME: idFromAddress
- *
- * DESCRIPTION: extracts the id portion of `addr`.
- */
-int AddressHandler::idFromAddress(Address *addr)
-{
-	return *(int *)(addr->addr);
-}
-
-/**
- * FUNCTION NAME: portFromAddress
- *
- * DESCRIPTION: extracts the port portion of `addr`.
- */
-short AddressHandler::portFromAddress(Address *addr)
-{
-	return *(short *)(&addr->addr[4]);
-}
-
 const short MP1Node::tCleanup = 20;
 const short MP1Node::tFail = 10;
 const short MP1Node::tGossip = 2;

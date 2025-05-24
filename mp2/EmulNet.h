@@ -12,6 +12,7 @@
 #define ENBUFFSIZE 30000
 
 #include "stdincludes.h"
+#include "Address.h"
 #include "Params.h"
 #include "Member.h"
 

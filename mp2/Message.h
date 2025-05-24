@@ -7,6 +7,7 @@
 #define MESSAGE_H_
 
 #include "stdincludes.h"
+#include "Address.h"
 #include "Member.h"
 #include "common.h"
 
