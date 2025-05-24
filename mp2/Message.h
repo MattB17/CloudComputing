@@ -21,13 +21,22 @@ typedef struct MessageHdr
   enum MembershipMessageType msgType;
 } MessageHdr;
 
+/**
+ * CLASS NAME: MembershipMessage
+ *
+ * DESCRIPTION: An abstract base class representing the functionality
+ *              of messages exchanged between nodes during the membership
+ *              protocol.
+ */
 class MembershipMessage {
 protected:
   size_t msgSize;
 	MessageHdr *msg;
 
 public:
+  // Abstract method to construct the actual message.
 	virtual char* getMessage() = 0;
+  
 	size_t getMessageSize() { return msgSize; }
 };
 

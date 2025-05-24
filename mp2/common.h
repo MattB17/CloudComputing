@@ -34,13 +34,4 @@ enum ReplicaType
   TERTIARY
 };
 
-// Transaction types
-enum TransactionType
-{
-  T_CREATE,
-  T_READ,
-  T_UPDATE,
-  T_DELETE
-};
-
 #endif

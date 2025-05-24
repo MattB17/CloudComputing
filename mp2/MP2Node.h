@@ -19,92 +19,7 @@
 #include "Params.h"
 #include "Message.h"
 #include "Queue.h"
-
-#define TRANSACTION_TIMEOUT 10
-
-/*
- * CLASS NAME: WriteTransactionState
- *
- * DESCRIPTION: Used to handle the state of pending write transactions.
- *
- * This class is only intended for creates, updates, or deletes as we do not
- * need to reconcile possibly conflicting values between the replicas. Rather
- * we just need to track whether the operations were successful or not at each
- * replica and monitor when a quorum is reached.
- */
-class WriteTransactionState {
-private:
-	string key;
-	string value;
-	TransactionType type;
-  int startTime;
-	short successCount;
-	short failureCount;
-
-public:
-	// For create or update transactions
-	WriteTransactionState(string k, string v, TransactionType t, int currTime);
-
-  // For delete transactions
-	WriteTransactionState(string k, int currTime);
-
-  string getKey() { return key; }
-	string getValue() { return value; }
-	TransactionType getTransactionType() { return type; }
-
-	bool hasTransactionExpired(int currTime);
-
-	void recordSuccess() { successCount++; }
-	void recordFailure() { failureCount++; }
-
-  // Indicates whether the transaction has succeeded.
-	// Note, we record the successCount equaling 2 to ensure we don't record a
-	// success multiple times (when it equals 2 and if it reaches a higher value).
-	bool hasTransactionSucceeded() { return successCount == 2; }
-	// Indicates whether the transaction has failed.
-	bool hasTransactionFailed() { return failureCount == 2; }
-
-  // Indicates whether all replies for the transaction have been received.
-	bool allRepliesReceived() { return successCount + failureCount == 3; }
-};
-
-/**
- * CLASS NAME: ReadTransactionState
- *
- * DESCRIPTION: Maintains state for a READ transaction.
- *
- * The read transaction functions differently from the other operations, as
- * we need to track the values reported by the replicas. If 2 replicas report
- * the same value, a quorum is reached and we can return that value.
- *
- */
-class ReadTransactionState {
-private:
-	string key;
-	int startTime;
-	// Used to record the counts for each value seen among the replicas.
-	// ie. if 2 replicas have the value `v` then `valueCounts` should have an
-	// entry for `v` with a count of 2.
-	unordered_map<string, int> valueCounts;
-
-public:
-	ReadTransactionState(string k, int currTime);
-
-	string getKey() { return key; }
-
-	bool hasTransactionExpired(int currTime);
-
-	void recordReplicaValue(string v);
-
-  // Indicates whether we have reached a quorum for value `v`.
-	bool hasReachedQuorum(string v);
-
-	// Indicates whether a quorum was reached for any value.
-	bool hasReachedQuorum();
-
-  // Indicates whether all replies for the transaction have been received.
-	bool allRepliesReceived();
-};
+#include "TransactionState.h"
 
 /**
  * CLASS NAME: MP2Node
@@ -119,11 +34,11 @@ public:
 class MP2Node {
 private:
 	// Vector holding the next two neighbors in the ring who have my replicas
-	vector<Node> hasMyReplicas;
+	std::vector<Node> hasMyReplicas;
 	// Vector holding the previous two neighbors in the ring whose replicas I have
-	vector<Node> haveReplicasOf;
+	std::vector<Node> haveReplicasOf;
 	// Ring
-	vector<Node> ring;
+	std::vector<Node> ring;
 	// Hash Table
 	std::unique_ptr<HashTable> ht;
 	// Member representing this member
