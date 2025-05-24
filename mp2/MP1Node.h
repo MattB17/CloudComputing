@@ -1,5 +1,5 @@
 /**********************************
- * FILE NAME: MP1Node.cpp
+ * FILE NAME: MP1Node.h
  *
  * DESCRIPTION: Membership protocol run by this Node.
  * 				Header file of MP1Node class.
@@ -13,65 +13,9 @@
 #include "Params.h"
 #include "Address.h"
 #include "Member.h"
+#include "Message.h"
 #include "EmulNet.h"
 #include "Queue.h"
-
-/**
- * Message Types
- */
-enum MsgTypes{
-    // Join request
-    JOINREQ,
-    // Join reply
-    JOINREP,
-    // Gossip message
-    GOSSIP,
-    UNKNOWN
-};
-
-/**
- * STRUCT NAME: MessageHdr
- *
- * DESCRIPTION: Header and content of a message
- */
-typedef struct MessageHdr {
-	enum MsgTypes msgType;
-} MessageHdr;
-
-/**
- * CLASS NAME: JoinMessage
- *
- * DESCRIPTION: Used to build join (JOINREP or JOINREQ) messages.
- */
-class JoinMessage {
-private:
-  size_t msgSize;
-  MessageHdr *msg;
-
-public:
-  JoinMessage(Address* fromAddr, MsgTypes&& joinType, long* heartbeat);
-  ~JoinMessage();
-  char* getMessage();
-  size_t getMessageSize() { return msgSize; }
-};
-
-/**
- * CLASS NAME: GossipMessage
- *
- * DESCRIPTION: Used to build a gossip message that encapsulates the
- *              membership table.
- */
-class GossipMessage {
-private:
-  size_t msgSize;
-  MessageHdr *msg;
-
-public:
-  GossipMessage(Address* fromAddr, std::vector<MemberListEntry>& memTable);
-  ~GossipMessage();
-  char* getMessage();
-  size_t getMessageSize() { return msgSize; }
-};
 
 /**
  * CLASS NAME: MP1Node

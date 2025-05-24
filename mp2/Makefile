@@ -14,7 +14,7 @@ all: Application
 Application: MP1Node.o EmulNet.o Application.o Log.o Params.o Address.o Member.o Trace.o MP2Node.o Node.o HashTable.o Entry.o Message.o
 	g++ -o Application MP1Node.o EmulNet.o Application.o Log.o Params.o Address.o Member.o Trace.o MP2Node.o Node.o HashTable.o Entry.o Message.o ${CFLAGS}
 
-MP1Node.o: MP1Node.cpp MP1Node.h Log.h Params.h Address.h Member.h EmulNet.h Queue.h
+MP1Node.o: MP1Node.cpp MP1Node.h Log.h Params.h Address.h Member.h Message.h EmulNet.h Queue.h
 	g++ -c MP1Node.cpp ${CFLAGS}
 
 EmulNet.o: EmulNet.cpp EmulNet.h Params.h Address.h Member.h

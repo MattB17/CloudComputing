@@ -283,7 +283,7 @@ void MP2Node::clientCreate(string key, string value) {
 		Message cMsg = Message(
 			currTransId,
 			this->memberNode->addr,
-		  MessageType::CREATE,
+		  KVMessageType::CREATE,
 		  key,
 		  value,
 		  replicaTypes[rIdx]);
@@ -319,7 +319,7 @@ void MP2Node::clientRead(string key)
 		Message rMsg = Message(
 			currTransId,
 			this->memberNode->addr,
-			MessageType::READ,
+			KVMessageType::READ,
 			key);
 
 		// Send the read message to the replica.
@@ -355,7 +355,7 @@ void MP2Node::clientUpdate(string key, string value)
 		Message rMsg = Message(
 			currTransId,
 			this->memberNode->addr,
-			MessageType::UPDATE,
+			KVMessageType::UPDATE,
 			key,
 			value,
 			replicaTypes[rIdx]);
@@ -391,7 +391,7 @@ void MP2Node::clientDelete(string key){
 		Message dMsg = Message(
 			currTransId,
 			this->memberNode->addr,
-			MessageType::DELETE,
+			KVMessageType::DELETE,
 			key);
 
 		// Send the delete message to the replica.
@@ -515,22 +515,22 @@ void MP2Node::checkMessages() {
 		// without logging or replying to the coordinator.
 		switch (msg.type)
 		{
-			case MessageType::CREATE:
+			case KVMessageType::CREATE:
 			  handleCreateMessage(msg);
 				break;
-			case MessageType::READ:
+			case KVMessageType::READ:
 			  handleReadMessage(msg);
 				break;
-			case MessageType::DELETE:
+			case KVMessageType::DELETE:
 			  handleDeleteMessage(msg);
 				break;
-			case MessageType::UPDATE:
+			case KVMessageType::UPDATE:
 			  handleUpdateMessage(msg);
 				break;
-			case MessageType::REPLY:
+			case KVMessageType::WRITE_REPLY:
 			  handleReplyMessage(msg);
 				break;
-			case MessageType::READREPLY:
+			case KVMessageType::READ_REPLY:
 			  handleReadReplyMessage(msg);
 				break;
 			default:
@@ -722,14 +722,14 @@ void MP2Node::stabilizationProtocol() {
 			Message secondaryMsg = Message(
 				-1,
 				this->memberNode->addr,
-				MessageType::CREATE,
+				KVMessageType::CREATE,
 				repItr->first,
 				v,
 				ReplicaType::SECONDARY);
 			Message tertiaryMsg = Message(
 				-1,
 				this->memberNode->addr,
-				MessageType::CREATE,
+				KVMessageType::CREATE,
 				repItr->first,
 				v,
 				ReplicaType::TERTIARY);
@@ -755,10 +755,11 @@ void MP2Node::stabilizationProtocol() {
 				{
 					// If its first successor hasn't changed then it was a TERTIARY but is
 					// now a SECONDARY.
-					secondaryMsg.type = MessageType::UPDATE;
+					secondaryMsg.type = KVMessageType::UPDATE;
 				}
 				// Otherwise, the original TERTIARY also failed so just issue a
-				// create for the now SECONDARY node (ie. don't change the MessageType).
+				// create for the now SECONDARY node (ie. don't change the
+				// KVMessageType).
 				this->sendMsg(&(this->hasMyReplicas[0].nodeAddress), secondaryMsg);
 
 				// And as we are assuming no rejoins / new nodes, the now 2nd successor
@@ -776,7 +777,7 @@ void MP2Node::stabilizationProtocol() {
 					  oldHasMyReplicas[1].nodeAddress)
 				{
 					// So update the successor to now have the SECONDARY.
-					secondaryMsg.type = MessageType::UPDATE;
+					secondaryMsg.type = KVMessageType::UPDATE;
 					this->sendMsg(&(this->hasMyReplicas[0].nodeAddress), secondaryMsg);
 					// And my now second successor has not seen the key before.
 					this->sendMsg(&(this->hasMyReplicas[1].nodeAddress), tertiaryMsg);

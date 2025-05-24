@@ -7,15 +7,23 @@
 // Transaction Id
 static int g_transID = 0;
 
+enum MembershipMessageType
+{
+  JOINREQ,  // Join request
+  JOINREP,  // Join reply
+  GOSSIP,  // Gossip Message
+  UNKNOWN
+};
+
 // message types, reply is the message from node to coordinator
-enum MessageType
+enum KVMessageType
 {
   CREATE,
   READ,
   UPDATE,
   DELETE,
-  REPLY,
-  READREPLY
+  WRITE_REPLY,  // Write reply from node to coordinator
+  READ_REPLY // Read reply from node to coordinator
 };
 
 // enum of replica types

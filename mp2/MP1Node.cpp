@@ -8,110 +8,6 @@
 #include "MP1Node.h"
 #include <random>
 
-/*
- * Note: You can change/add any functions in MP1Node.{h,cpp}
- */
-
-/**
- * JoinMessage constructor.
- *
- * DESCRIPTION: Builds the message based on the source address `fromAddr`, the
- * heartbeat `heartbeat`, and the join message type `joinType`
- */
-JoinMessage::JoinMessage(Address* fromAddr,
-	                       MsgTypes&& joinType,
-												 long* heartbeat)
-{
-	// So a message is a messageHdr, followed by the to address,
-	// followed by 1 byte, followed by a long representing the heartbeat.
-	msgSize = sizeof(MessageHdr) + sizeof(fromAddr->addr) + 1 + sizeof(long);
-	msg = (MessageHdr *) malloc(msgSize * sizeof(char));
-	msg->msgType = joinType;
-	memcpy((char *)(msg + 1), &fromAddr->addr, sizeof(fromAddr->addr));
-	memcpy(
-		(char *)(msg + 1) + 1 + sizeof(fromAddr->addr), heartbeat, sizeof(long));
-}
-
-/**
- * JoinMessage destructor.
- * Frees the allocated `msg`.
- */
-JoinMessage::~JoinMessage()
-{
-	free(msg);
-}
-
-/**
- * FUNCTION NAME: getMessage
- *
- * DESCRIPTION: Returns the message.
- */
-char* JoinMessage::getMessage()
-{
-	return (char *) msg;
-}
-
-/**
- * Constructor for a GossipMessage.
- *
- * The gossip message is built from the Address `fromAddr` and the active nodes
- * in `memTable`.
- */
-GossipMessage::GossipMessage(Address* fromAddr,
-													   std::vector<MemberListEntry>& memTable)
-{
-  long numEntries = memTable.size();
-
-	// Will have message header, followed by source address, 1 bit for null
-	// terminator, and then the number of entries in the membership table.
-	msgSize = sizeof(MessageHdr) + sizeof(fromAddr->addr) + 1 + sizeof(long);
-	// For each active entry in the membership table we will send its id, port,
-	// and heartbeat (we don't need to send the timestamp as that is local time
-  // and won't be used by the receiving process)
-	msgSize += (numEntries * (sizeof(int) + sizeof(short) + sizeof(long)));
-
-  // Allocate space for the message and set the message type, from address,
-	// and size of membership table.
-	msg = (MessageHdr *) malloc(msgSize * sizeof(char));
-	msg->msgType = GOSSIP;
-  memcpy((char *)(msg + 1), &fromAddr->addr, sizeof(fromAddr->addr));
-	memcpy(
-		(char *)(msg + 1) + sizeof(fromAddr->addr) + 1, &numEntries, sizeof(long));
-
-	// Now fill in all the member entries.
-	size_t offset = sizeof(fromAddr->addr) + 1 + sizeof(long);
-	for (auto itr = memTable.begin(); itr != memTable.end(); itr++) {
-		int id = itr->getid();
-		short port = itr->getport();
-		long heartbeat = itr->getheartbeat();
-		memcpy((char *)(msg+1) + offset, &id, sizeof(int));
-		offset += sizeof(int);
-		memcpy((char *)(msg+1) + offset, &port, sizeof(short));
-		offset += sizeof(short);
-		memcpy((char *)(msg+1) + offset, &heartbeat, sizeof(long));
-		offset += sizeof(long);
-	}
-}
-
-/**
- * GossipMessage destructor.
- * Frees the allocated `msg`.
- */
-GossipMessage::~GossipMessage()
-{
-	free(msg);
-}
-
-/**
- * FUNCTION NAME: getMessage
- *
- * DESCRIPTION: Returns the message.
- */
-char* GossipMessage::getMessage()
-{
-	return (char *) msg;
-}
-
 const short MP1Node::tCleanup = 20;
 const short MP1Node::tFail = 10;
 const short MP1Node::tGossip = 2;
@@ -227,8 +123,9 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
     memberNode->inGroup = true;
   }
   else {
-		JoinMessage joinMsg = JoinMessage(
-			&memberNode->addr, JOINREQ, &memberNode->heartbeat);
+		JoinMessage joinMsg = JoinMessage(&memberNode->addr,
+			                                MembershipMessageType::JOINREQ,
+																			&memberNode->heartbeat);
 		logMsg("Trying to join...");
 
     // send JOINREQ message to introducer member
@@ -327,7 +224,7 @@ bool MP1Node::recvCallBack(char *data, int size ) {
 		long senderHeartbeat = *(long *)(
 			data + sizeof(MessageHdr) + sizeof(senderAddr->addr) + 1);
 
-	  if (msgHeader->msgType == JOINREP)
+	  if (msgHeader->msgType == MembershipMessageType::JOINREP)
 	  {
 		  // We received a reply to our join request, so we are now in the group.
 		  memberNode->inGroup = true;
@@ -337,12 +234,13 @@ bool MP1Node::recvCallBack(char *data, int size ) {
 		  addMembershipEntry(senderAddr, senderHeartbeat);
 
 	  }
-	  else if (msgHeader->msgType == JOINREQ)
+	  else if (msgHeader->msgType == MembershipMessageType::JOINREQ)
 	  {
 		  // Received a JOINREQ so need to send a JOINREP as the response.
 			incrementHeartbeat();
-		  JoinMessage joinMsg = JoinMessage(
-			  &memberNode->addr, JOINREP, &memberNode->heartbeat);
+		  JoinMessage joinMsg = JoinMessage(&memberNode->addr,
+				                                MembershipMessageType::JOINREP,
+																				&memberNode->heartbeat);
 
 		  emulNet->ENsend(&(memberNode->addr), senderAddr,
 		                  joinMsg.getMessage(), joinMsg.getMessageSize());
