@@ -30,7 +30,7 @@ Node::~Node() {}
  * DESCRIPTION: This function computes the hash code of the node address
  */
 void Node::computeHashCode() {
-	nodeHashCode = hashFunc(nodeAddress.addr)%RING_SIZE;
+	nodeHashCode = hashFunc(nodeAddress.addr) % Config::ringSize;
 }
 
 /**

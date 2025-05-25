@@ -74,8 +74,8 @@ void Log::unconditionalLog(Address *addr, const char * str, ...)
 
 		strcpy(stdstring3, stdstring2);
 
-		strcat(stdstring2, DBG_LOG);
-		strcat(stdstring3, STATS_LOG);
+		strcat(stdstring2, Config::debugLog.c_str());
+		strcat(stdstring3, Config::statsLog.c_str());
 
 		fp = fopen(stdstring2, "w");
 		fp2 = fopen(stdstring3, "w");
@@ -95,7 +95,7 @@ void Log::unconditionalLog(Address *addr, const char * str, ...)
 	if (!firstTime)
 	{
 		int magicNumber = 0;
-		string magic = MAGIC_NUMBER;
+		string magic = Config::magicNumber;
 		int len = magic.length();
 		for (int i = 0; i < len; i++)
 		{
@@ -119,7 +119,7 @@ void Log::unconditionalLog(Address *addr, const char * str, ...)
 		fprintf(fp, "%s", buffer);
 	}
 
-	if (++numwrites >= MAXWRITES)
+	if (++numwrites >= Config::maxWrites)
 	{
 		fflush(fp);
 		fflush(fp2);

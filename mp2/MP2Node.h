@@ -11,6 +11,7 @@
  * Header files
  */
 #include "stdincludes.h"
+#include "Config.h"
 #include "Address.h"
 #include "EmulNet.h"
 #include "Node.h"

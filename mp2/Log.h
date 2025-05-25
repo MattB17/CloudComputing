@@ -8,18 +8,10 @@
 #define _LOG_H_
 
 #include "stdincludes.h"
+#include "Config.h"
 #include "Params.h"
 #include "Address.h"
 #include "Member.h"
-
-/*
- * Macros
- */
-// number of writes after which to flush file
-#define MAXWRITES 1
-#define MAGIC_NUMBER "CS425"
-#define DBG_LOG "dbg.log"
-#define STATS_LOG "stats.log"
 
 /**
  * CLASS NAME: Log

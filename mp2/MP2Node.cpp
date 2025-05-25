@@ -131,7 +131,7 @@ vector<Node> MP2Node::getMembershipList() {
 size_t MP2Node::hashFunction(string key) {
 	std::hash<string> hashFunc;
 	size_t ret = hashFunc(key);
-	return ret%RING_SIZE;
+	return ret % Config::ringSize;
 }
 
 /**

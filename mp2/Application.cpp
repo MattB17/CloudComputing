@@ -6,19 +6,6 @@
 
 #include "Application.h"
 
-void handler(int sig) {
-	void *array[10];
-	size_t size;
-
-	// get void*'s for all entries on the stack
-	size = backtrace(array, 10);
-
-	// print out all the frames to stderr
-	fprintf(stderr, "Error: signal %d:\n", sig);
-	backtrace_symbols_fd(array, size, STDERR_FILENO);
-	exit(1);
-}
-
 /**********************************
  * FUNCTION NAME: main
  *
@@ -349,12 +336,10 @@ void Application::mp2Run() {
  */
 Address Application::getjoinaddr(void)
 {
-	//trace.funcEntry("Application::getjoinaddr");
     Address joinaddr;
     joinaddr.init();
     *(int *)(&(joinaddr.addr))=1;
     *(short *)(&(joinaddr.addr[4]))=0;
-    //trace.funcExit("Application::getjoinaddr", SUCCESS);
     return joinaddr;
 }
 

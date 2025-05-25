@@ -8,6 +8,7 @@
 #define NODE_H_
 
 #include "stdincludes.h"
+#include "Config.h"
 #include "Address.h"
 #include "Member.h"
 
