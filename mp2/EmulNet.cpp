@@ -17,9 +17,9 @@ EmulNet::EmulNet(std::shared_ptr<Params> p)
 	emulnet.setNextId(1);
 	emulnet.settCurrBuffSize(0);
 	enInited=0;
-	for (i = 0; i < MAX_NODES; i++)
+	for (i = 0; i < Config::maxNodes; i++)
 	{
-		for (j = 0; j < MAX_TIME; j++)
+		for (j = 0; j < Config::maxTime; j++)
 		{
 			sent_msgs[i][j] = 0;
 			recv_msgs[i][j] = 0;
@@ -36,9 +36,9 @@ EmulNet::EmulNet(EmulNet &anotherEmulNet)
 	int i, j;
 	this->par = anotherEmulNet.par;
 	this->enInited = anotherEmulNet.enInited;
-	for (i = 0; i < MAX_NODES; i++)
+	for (i = 0; i < Config::maxNodes; i++)
 	{
-		for (j = 0; j < MAX_TIME; j++)
+		for (j = 0; j < Config::maxTime; j++)
 		{
 			this->sent_msgs[i][j] = anotherEmulNet.sent_msgs[i][j];
 			this->recv_msgs[i][j] = anotherEmulNet.recv_msgs[i][j];
@@ -55,8 +55,8 @@ EmulNet& EmulNet::operator =(EmulNet &anotherEmulNet)
 	int i, j;
 	this->par = anotherEmulNet.par;
 	this->enInited = anotherEmulNet.enInited;
-	for ( i = 0; i < MAX_NODES; i++ ) {
-		for ( j = 0; j < MAX_TIME; j++ ) {
+	for ( i = 0; i < Config::maxNodes; i++ ) {
+		for ( j = 0; j < Config::maxTime; j++ ) {
 			this->sent_msgs[i][j] = anotherEmulNet.sent_msgs[i][j];
 			this->recv_msgs[i][j] = anotherEmulNet.recv_msgs[i][j];
 		}
@@ -97,7 +97,7 @@ int EmulNet::ENsend(Address *myaddr, Address *toaddr, char *data, int size)
 	en_msg *em;
 	static char temp[2048];
 
-	if ((emulnet.currbuffsize >= ENBUFFSIZE) ||
+	if ((emulnet.currbuffsize >= Config::enBuffSize) ||
 	    (size + (int)sizeof(en_msg) >= par->MAX_MSG_SIZE))
 	{
 		return 0;
@@ -115,8 +115,8 @@ int EmulNet::ENsend(Address *myaddr, Address *toaddr, char *data, int size)
 	int src = *(int *)(myaddr->addr);
 	int time = par->getcurrtime();
 
-	assert(src <= MAX_NODES);
-	assert(time < MAX_TIME);
+	assert(src <= Config::maxNodes);
+	assert(time < Config::maxTime);
 
 	sent_msgs[src][time]++;
 
@@ -185,8 +185,8 @@ int EmulNet::ENrecv(Address *myaddr,
 			int dst = *(int *)(myaddr->addr);
 			int time = par->getcurrtime();
 
-			assert(dst <= MAX_NODES);
-			assert(time < MAX_TIME);
+			assert(dst <= Config::maxNodes);
+			assert(time < Config::maxTime);
 
 			recv_msgs[dst][time]++;
 		}

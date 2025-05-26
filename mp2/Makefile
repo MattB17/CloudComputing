@@ -17,10 +17,10 @@ Application: Config.o MP1Node.o EmulNet.o Application.o Log.o Params.o Address.o
 MP1Node.o: MP1Node.cpp MP1Node.h Log.h Params.h Address.h Member.h Message.h EmulNet.h Queue.h
 	g++ -c MP1Node.cpp ${CFLAGS}
 
-EmulNet.o: EmulNet.cpp EmulNet.h Params.h Address.h Member.h
+EmulNet.o: EmulNet.cpp EmulNet.h Config.h Params.h Address.h Member.h
 	g++ -c EmulNet.cpp ${CFLAGS}
 
-Application.o: Application.cpp Application.h Member.h Log.h Params.h Address.h Member.h EmulNet.h Queue.h
+Application.o: Application.cpp Application.h Member.h Log.h Config.h Params.h Address.h Member.h EmulNet.h Queue.h
 	g++ -c Application.cpp ${CFLAGS}
 
 Log.o: Log.cpp Log.h Config.h Params.h Address.h Member.h

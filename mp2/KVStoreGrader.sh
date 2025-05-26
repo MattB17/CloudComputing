@@ -78,7 +78,7 @@ else
     	echo "COMPILATION ERROR !!!"
     	exit
     fi
-	./Application ./testcases/create.conf --debug
+	./Application ./testcases/create.conf
 fi
 
 echo "TEST 1: Create 3 replicas of every key"
@@ -148,7 +148,7 @@ else
     	echo "COMPILATION ERROR !!!"
     	exit
     fi
-	./Application ./testcases/delete.conf --debug
+	./Application ./testcases/delete.conf
 fi
 
 echo "TEST 1: Delete 3 replicas of every key"
@@ -246,7 +246,7 @@ else
     	echo "COMPILATION ERROR !!!"
     	exit
     fi
-	./Application ./testcases/read.conf --debug
+	./Application ./testcases/read.conf
 fi
 
 read_operations=`grep -i "${READ_OPERATION}" dbg.log  | cut -d" " -f3 | tr -s ']' ' '  | tr -s '[' ' ' | sort`
@@ -454,7 +454,7 @@ else
     	echo "COMPILATION ERROR !!!"
     	exit
     fi
-	./Application ./testcases/update.conf --debug
+	./Application ./testcases/update.conf
 fi
 
 update_operations=`grep -i "${UPDATE_OPERATION}" dbg.log  | cut -d" " -f3 | tr -s ']' ' '  | tr -s '[' ' ' | sort`

@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
   std::string usageString =
 	  "Incorrect Usage. Correct form: ./Application <test_file> [--debug]";
 
-	if (argc < 2 || argc > 4)
+	if (argc < 2 || argc > 3)
 	{
 		std::cout << usageString << std::endl;
 		return FAILURE;
@@ -42,6 +42,12 @@ int main(int argc, char *argv[]) {
 
 	return SUCCESS;
 }
+
+size_t Application::nodeCount = 0;
+const char Application::alphanum[] =
+"0123456789"
+"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+"abcdefghijklmnopqrstuvwxyz";
 
 /**
  * Constructor of the Application class
@@ -92,12 +98,15 @@ int Application::run()
 	srand(time(NULL));
 
 	// As time runs along
-	for( par->globaltime = 0; par->globaltime < TOTAL_RUNNING_TIME; ++par->globaltime ) {
+	for(par->globaltime = 0;
+      par->globaltime < Config::totalRunningTime;
+      ++par->globaltime)
+  {
 		// Run the membership protocol
 		mp1Run();
 
 		// Wait for all nodes to join
-		if ( par->allNodesJoined == nodeCount && !allNodesJoined ) {
+		if (par->allNodesJoined == Application::nodeCount && !allNodesJoined) {
 			timeWhenAllNodesHaveJoined = par->getcurrtime();
 			allNodesJoined = true;
 		}
@@ -153,7 +162,7 @@ void Application::mp1Run() {
 			std::cout << i;
 			std::cout << "-th introduced node is assigned with the address: ";
 			std::cout << mp1[i]->getMemberNode()->addr.getAddress() << std::endl;
-			nodeCount += i;
+			Application::nodeCount += i;
 		}
 
 		/*
@@ -218,23 +227,26 @@ void Application::mp2Run() {
 	/**
 	 * Insert a set of test key value pairs into the system
 	 */
-	if (par->getcurrtime() == INSERT_TIME) {
+	if (par->getcurrtime() == Config::insertTime)
+  {
 		insertTestKVPairs();
 	}
 
 	/**
 	 * Test CRUD operations
 	 */
-	if (par->getcurrtime() >= TEST_TIME)
+	if (par->getcurrtime() >= Config::testTime)
 	{
 		/**************
 		 * CREATE TEST
 		 **************/
 		/**
-		 * TEST 1: Checks if there are RF * NUMBER_OF_INSERTS CREATE SUCCESS message are in the log
+		 * TEST 1: Checks if there are
+     * Config::numReplicas * Config::numInserts CREATE SUCCESS messages are in
+     * the log
 		 *
 		 */
-		if (par->getcurrtime() == TEST_TIME && CREATE_TEST == par->testType)
+		if (par->getcurrtime() == Config::testTime && CREATE_TEST == par->testType)
 		{
 			std::cout << std::endl << "Doing create test at time: ";
 			std::cout << par->getcurrtime() << std::endl;
@@ -244,12 +256,13 @@ void Application::mp2Run() {
 		 * DELETE TESTS
 		 ***************/
 		/**
-		 * TEST 1: NUMBER_OF_INSERTS/2 Key Value pair are deleted.
-		 * 		   Check whether RF * NUMBER_OF_INSERTS/2 DELETE SUCCESS message are in the log
+		 * TEST 1: Config::numInserts/2 Key Value pair are deleted.
+		 * 		   Check whether Config::numReplicas * Config::numInserts/2 DELETE
+    *        SUCCESS message are in the log
 		 * TEST 2: Delete a non-existent key. Check for a DELETE FAIL message in the lgo
 		 *
 		 */
-		else if (par->getcurrtime() == TEST_TIME && DELETE_TEST == par->testType)
+		else if (par->getcurrtime() == Config::testTime && DELETE_TEST == par->testType)
 		{
 			deleteTest();
 		} // End of delete test
@@ -265,14 +278,14 @@ void Application::mp2Run() {
 		 * TEST 2: Fail a single replica of a key. Check for correct value of the key
 		 * 		   being read in quorum of replicas
 		 *
-		 * Wait for STABILIZE_TIME after TEST 2 (stabilization protocol should ensure at least
-		 * 3 replicas for all keys at all times)
+		 * Wait for Config::stabilizeTime after TEST 2 (stabilization protocol
+     * should ensure at least 3 replicas for all keys at all times)
 		 *
 		 * TEST 3 part 1: Fail two replicas of a key. Read the key and check for READ FAIL message in the log.
 		 * 				  READ should fail because quorum replicas of the key are not up
 		 *
-		 * Wait for another STABILIZE_TIME after TEST 3 part 1 (stabilization protocol should ensure at least
-		 * 3 replicas for all keys at all times)
+		 * Wait for another Config::stabilizeTime after TEST 3 part 1 (stabilization
+     * protocol should ensure at least 3 replicas for all keys at all times)
 		 *
 		 * TEST 3 part 2: Read the same key as TEST 3 part 1. Check for correct value of the key
 		 * 		  		  being read in quorum of replicas
@@ -285,7 +298,7 @@ void Application::mp2Run() {
 		 * TEST 5: Read a non-existent key. Check for a READ FAIL message in the log
 		 *
 		 */
-		else if (par->getcurrtime() >= TEST_TIME && READ_TEST == par->testType)
+		else if (par->getcurrtime() >= Config::testTime && READ_TEST == par->testType)
 		{
 			readTest();
 		} // end of read test
@@ -301,14 +314,14 @@ void Application::mp2Run() {
 		 * TEST 2: Fail a single replica of a key. Update the key. Check for correct new value of the key
 		 * 		   being updated in quorum of replicas
 		 *
-		 * Wait for STABILIZE_TIME after TEST 2 (stabilization protocol should ensure at least
-		 * 3 replicas for all keys at all times)
+		 * Wait for Config::stabilizeTime after TEST 2 (stabilization protocol
+     * should ensure at least 3 replicas for all keys at all times)
 		 *
 		 * TEST 3 part 1: Fail two replicas of a key. Update the key and check for READ FAIL message in the log
 		 * 				  UPDATE should fail because quorum replicas of the key are not up
 		 *
-		 * Wait for another STABILIZE_TIME after TEST 3 part 1 (stabilization protocol should ensure at least
-		 * 3 replicas for all keys at all times)
+		 * Wait for another Config::stabilizeTime after TEST 3 part 1 (stabilization
+     * protocol should ensure at least 3 replicas for all keys at all times)
 		 *
 		 * TEST 3 part 2: Update the same key as TEST 3 part 1. Check for correct new value of the key
 		 * 		   		  being update in quorum of replicas
@@ -321,12 +334,12 @@ void Application::mp2Run() {
 		 * TEST 5: Update a non-existent key. Check for a UPDATE FAIL message in the log
 		 *
 		 */
-		else if (par->getcurrtime() >= TEST_TIME && UPDATE_TEST == par->testType)
+		else if (par->getcurrtime() >= Config::testTime && UPDATE_TEST == par->testType)
 		{
 			updateTest();
 		} // End of update test
 
-	} // end of if ( par->getcurrtime == TEST_TIME)
+	} // end of if (par->getcurrtime == Config::testTime)
 }
 
 /**
@@ -360,7 +373,7 @@ int Application::findARandomNodeThatIsAlive() {
 /**
  * FUNCTION NAME: initTestKVPairs
  *
- * DESCRIPTION: Init NUMBER_OF_INSERTS test KV pairs in the map
+ * DESCRIPTION: Init Config::numInserts test KV pairs in the map
  */
 void Application::initTestKVPairs() {
 	srand(time(NULL));
@@ -368,14 +381,14 @@ void Application::initTestKVPairs() {
 	string key;
 	key.clear();
 	testKVPairs.clear();
-	int alphanumLen = sizeof(alphanum) - 1;
-	while (testKVPairs.size() != NUMBER_OF_INSERTS)
+	int alphanumLen = sizeof(Application::alphanum) - 1;
+	while (testKVPairs.size() != Config::numInserts)
 	{
-		for (i = 0; i < KEY_LENGTH; i++)
+		for (i = 0; i < Config::keyLength; i++)
 		{
-			key.push_back(alphanum[(rand()%alphanumLen)]);
+			key.push_back(Application::alphanum[(rand()%alphanumLen)]);
 		}
-		string value = "value" + to_string((rand()%NUMBER_OF_INSERTS));
+		string value = "value" + to_string((rand() % Config::numInserts));
 		testKVPairs[key] = value;
 		key.clear();
 	}
@@ -478,7 +491,7 @@ void Application::readTest() {
 	int replicaIdToFail = TERTIARY;
 	int nodeToFail;
 	bool failedOneNode = false;
-	int targetTime = TEST_TIME;
+	int targetTime = Config::testTime;
 
 	/**
  	 * Test 1: Test if value of a single read operation is read correctly in quorum number of nodes
@@ -503,7 +516,7 @@ void Application::readTest() {
 	/**
 	 * Test 2: FAIL ONE REPLICA. Test if value is read correctly in quorum number of nodes after ONE OF THE REPLICAS IS FAILED
 	 */
-	targetTime += FIRST_FAIL_TIME;
+	targetTime += Config::firstFailTime;
 	if (par->getcurrtime() == targetTime)
 	{
 		// Step 2.a Find a node that is alive and assign it as number
@@ -513,7 +526,7 @@ void Application::readTest() {
 		replicas.clear();
 		replicas = mp2[number]->findNodes(it->first);
 		// if less than quorum replicas are found then exit
-		if (replicas.size() < (RF-1))
+		if (replicas.size() < (Config::numReplicas-1))
 		{
 			std::cout << std::endl;
 			std::cout << "Could not find at least quorum replicas for this key. ";
@@ -588,8 +601,8 @@ void Application::readTest() {
 	/**
 	 * Test 3 part 1: Fail two replicas. Test if value is read correctly in quorum number of nodes after TWO OF THE REPLICAS ARE FAILED
 	 */
-	// Wait for STABILIZE_TIME and fail two replicas
-	targetTime += STABILIZE_TIME;
+	// Wait for Config::stabilizeTime and fail two replicas
+	targetTime += Config::stabilizeTime;
 	if (par->getcurrtime() >= targetTime)
 	{
 		vector<int> nodesToFail;
@@ -684,10 +697,11 @@ void Application::readTest() {
 		}
 
 		/**
-		 * TEST 3 part 2: After failing two replicas and waiting for STABILIZE_TIME, issue a read
+		 * TEST 3 part 2: After failing two replicas and waiting for
+     *                Config::stabilizeTime, issue a read
 		 */
 		// Step 3.d Wait for stabilization protocol to kick in
-		targetTime += STABILIZE_TIME;
+		targetTime += Config::stabilizeTime;
 		if (par->getcurrtime() == targetTime)
 		{
 			number = findARandomNodeThatIsAlive();
@@ -709,7 +723,7 @@ void Application::readTest() {
 	/**
 	 * Test 4: FAIL A NON-REPLICA. Test if value is read correctly in quorum number of nodes after a NON-REPLICA IS FAILED
 	 */
-	targetTime += LAST_FAIL_TIME;
+	targetTime += Config::lastFailTime;
 	if (par->getcurrtime() == targetTime)
 	{
 		// Step 4.a. Find a node that is alive
@@ -805,7 +819,7 @@ void Application::updateTest() {
 	/**
 	 * Test 1: Test if value is updated correctly in quorum number of nodes
 	 */
-	int targetTime = TEST_TIME;
+	int targetTime = Config::testTime;
 	if (par->getcurrtime() == targetTime)
 	{
 		// Step 1.a. Find a node that is alive
@@ -827,7 +841,7 @@ void Application::updateTest() {
 	/**
 	 * Test 2: FAIL ONE REPLICA. Test if value is updated correctly in quorum number of nodes after ONE OF THE REPLICAS IS FAILED
 	 */
-	targetTime += FIRST_FAIL_TIME;
+	targetTime += Config::firstFailTime;
 	if (par->getcurrtime() == targetTime)
 	{
 		// Step 2.a Find a node that is alive and assign it as number
@@ -837,7 +851,7 @@ void Application::updateTest() {
 		replicas.clear();
 		replicas = mp2[number]->findNodes(it->first);
 		// if quorum replicas are not found then exit
-		if (replicas.size() < RF-1)
+		if (replicas.size() < (Config::numReplicas-1))
 		{
 			log->unconditionalLog(&mp2[number]->getMemberNode()->addr,
 			                      "Could not find at least quorum replicas for this key. Exiting!!! size of replicas vector: %d",
@@ -913,7 +927,7 @@ void Application::updateTest() {
 	/**
 	 * Test 3 part 1: Fail two replicas. Test if value is updated correctly in quorum number of nodes after TWO OF THE REPLICAS ARE FAILED
 	 */
-	targetTime += STABILIZE_TIME;
+	targetTime += Config::stabilizeTime;
 	if (par->getcurrtime() >= targetTime)
 	{
 		vector<int> nodesToFail;
@@ -1004,10 +1018,11 @@ void Application::updateTest() {
 		}
 
 		/**
-		 * TEST 3 part 2: After failing two replicas and waiting for STABILIZE_TIME, issue an update
+		 * TEST 3 part 2: After failing two replicas and waiting for
+     *                Config::stabilizeTime, issue an update
 		 */
 		// Step 3.d Wait for stabilization protocol to kick in
-		targetTime += STABILIZE_TIME;
+		targetTime += Config::stabilizeTime;
 		if (par->getcurrtime() == targetTime)
 		{
 			number = findARandomNodeThatIsAlive();
@@ -1029,7 +1044,7 @@ void Application::updateTest() {
 	/**
 	 * Test 4: FAIL A NON-REPLICA. Test if value is read correctly in quorum number of nodes after a NON-REPLICA IS FAILED
 	 */
-	targetTime += LAST_FAIL_TIME;
+	targetTime += Config::lastFailTime;
 	if (par->getcurrtime() == targetTime)
 	{
 		// Step 4.a. Find a node that is alive

@@ -7,11 +7,8 @@
 #ifndef _EMULNET_H_
 #define _EMULNET_H_
 
-#define MAX_NODES 1000
-#define MAX_TIME 3600
-#define ENBUFFSIZE 30000
-
 #include "stdincludes.h"
+#include "Config.h"
 #include "Address.h"
 #include "Params.h"
 #include "Member.h"
@@ -38,7 +35,7 @@ public:
 	int nextid;
 	int currbuffsize;
 	int firsteltindex;
-	en_msg* buff[ENBUFFSIZE];
+	en_msg* buff[Config::enBuffSize];
 	EM() {}
 	EM& operator = (EM &anotherEM) {
 		this->nextid = anotherEM.getNextId();
@@ -81,8 +78,8 @@ class EmulNet
 {
 private:
 	std::shared_ptr<Params> par;
-	int sent_msgs[MAX_NODES + 1][MAX_TIME];
-	int recv_msgs[MAX_NODES + 1][MAX_TIME];
+	int sent_msgs[Config::maxNodes + 1][Config::maxTime];
+	int recv_msgs[Config::maxNodes + 1][Config::maxTime];
 	int enInited;
 	EM emulnet;
 public:
