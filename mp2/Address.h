@@ -47,8 +47,8 @@ class AddressHandler {
 public:
   AddressHandler() {}
   void addressFromIdAndPort(Address* addr, int id, short port);
-  int idFromAddress(Address* addr);
-  short portFromAddress(Address* addr);
+  int idFromAddress(const Address& addr);
+  short portFromAddress(const Address& addr);
 };
 
 #endif  // ADDRESS_H_

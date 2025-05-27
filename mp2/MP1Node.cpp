@@ -29,7 +29,7 @@ MP1Node::MP1Node(std::shared_ptr<Member> member,
 	this->emulNet = emul;
 	this->log = log;
 	this->memberNode->addr = address;
-	this->addressHandler = new AddressHandler();
+	this->addressHandler = std::make_unique<AddressHandler>();
 	this->gossipProp = 0.5;
 	this->addrStr = std::string(address.addr);
 }
@@ -145,10 +145,7 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
  */
 int MP1Node::finishUpThisNode(){
 	 this->memberNode->inGroup = false;
-   this->memberNode = nullptr;
 	 this->emulNet->ENcleanup();
-	 this->emulNet = nullptr;
-	 delete this->addressHandler;
 
 	 return 0;
 }
@@ -205,14 +202,15 @@ void MP1Node::checkMessages() {
 bool MP1Node::recvCallBack(char *data, int size ) {
   // Extract the message header and the address of the sender.
 	MessageHdr *msgHeader = (MessageHdr *)(data);
-	Address *senderAddr = (Address *)(data + sizeof(MessageHdr));
+	// Get a pointer to an Address and dereference it to get an Address.
+	Address senderAddr = *(Address *)(data + sizeof(MessageHdr));
 
   if (msgHeader->msgType == GOSSIP)
 	{
 		// If it's a gossip message then the next long is the size of the
 		// sender's member table.
 		long memTableSize = *(long *)(
-			data + sizeof(MessageHdr) + sizeof(senderAddr->addr) + 1);
+			data + sizeof(MessageHdr) + sizeof(senderAddr.addr) + 1);
 		logEvent("Received gossip message from %d.%d.%d.%d:%d", senderAddr);
 
 		handleGossipMessage(data, memTableSize, senderAddr);
@@ -222,7 +220,7 @@ bool MP1Node::recvCallBack(char *data, int size ) {
 		// Otherwise, it's a join message (request or reply) and the payload is only
 		// one long representing the sender's heartbeat.
 		long senderHeartbeat = *(long *)(
-			data + sizeof(MessageHdr) + sizeof(senderAddr->addr) + 1);
+			data + sizeof(MessageHdr) + sizeof(senderAddr.addr) + 1);
 
 	  if (msgHeader->msgType == MembershipMessageType::JOINREP)
 	  {
@@ -242,7 +240,7 @@ bool MP1Node::recvCallBack(char *data, int size ) {
 				                                MembershipMessageType::JOINREP,
 																				&memberNode->heartbeat);
 
-		  emulNet->ENsend(&(memberNode->addr), senderAddr,
+		  emulNet->ENsend(&(memberNode->addr), &senderAddr,
 		                  joinMsg.getMessage(), joinMsg.getMessageSize());
 		  logEvent(
 			  "Sending reply message for join request to %d.%d.%d.%d:%d", senderAddr);
@@ -322,7 +320,7 @@ Address MP1Node::getJoinAddress() {
 void MP1Node::initMemberListTable() {
 	memberNode->memberList.clear();
 	// Add self to the table
-	addMembershipEntry(&memberNode->addr, memberNode->heartbeat);
+	addMembershipEntry(memberNode->addr, memberNode->heartbeat);
 }
 
 /**
@@ -333,12 +331,12 @@ void MP1Node::initMemberListTable() {
 void MP1Node::printAddress(Address *addr)
 {
     printf("%d.%d.%d.%d:%d \n",  addr->addr[0],addr->addr[1],addr->addr[2],
-           addr->addr[3], addressHandler->portFromAddress(addr));
+           addr->addr[3], addressHandler->portFromAddress(*addr));
 }
 
-void MP1Node::addMembershipEntry(Address* newAddr, long newHeartbeat)
+void MP1Node::addMembershipEntry(Address& newAddr, long newHeartbeat)
 {
-	std::string newAddrStr(newAddr->addr);
+	std::string newAddrStr(newAddr.addr);
 	auto mleItr = memTableIdx.find(newAddrStr);
 	if (mleItr != memTableIdx.end()) {
 		return;
@@ -351,8 +349,8 @@ void MP1Node::addMembershipEntry(Address* newAddr, long newHeartbeat)
 
 	memTableIdx[newAddrStr] = memberNode->memberList.size();
 	memberNode->memberList.push_back(mle);
-	log->logNodeAdd(&memberNode->addr, newAddr);
-	if (*newAddr != memberNode->addr)
+	log->logNodeAdd(&memberNode->addr, &newAddr);
+	if (memberNode->addr != newAddr)
 	{
     memberNode->numNeighbours++;
   }
@@ -364,13 +362,13 @@ void MP1Node::addMembershipEntry(Address* newAddr, long newHeartbeat)
  * DESCRIPTION: Logs an event that occurred at this node involving Address
  *              `addr` amd the message `eventMsg`.
  */
-void MP1Node::logEvent(const char* eventMsg, Address* addr) {
+void MP1Node::logEvent(const char* eventMsg, const Address& addr) {
 	char logMsg[1024];
 	snprintf(logMsg, sizeof(logMsg), eventMsg,
-					 addr->addr[0],
-					 addr->addr[1],
-					 addr->addr[2],
-					 addr->addr[3],
+					 addr.addr[0],
+					 addr.addr[1],
+					 addr.addr[2],
+					 addr.addr[3],
 					 addressHandler->portFromAddress(addr));
 	log->logDebug(&memberNode->addr, logMsg);
 }
@@ -462,16 +460,16 @@ void MP1Node::sendGossip(std::vector<MemberListEntry>& activeNodes,
 		}
 		emulNet->ENsend(&memberNode->addr, &destAddr,
 										msg, gossipMsg.getMessageSize());
-		logEvent("Sending gossip message to %d.%d.%d.%d:%d", &destAddr);
+		logEvent("Sending gossip message to %d.%d.%d.%d:%d", destAddr);
 	}
 }
 
 void MP1Node::handleGossipMessage(char* gossipData,
 	                                long numGossipEntries,
-																	Address* senderAddr)
+																	const Address& senderAddr)
 {
 	size_t offset = (
-		sizeof(MessageHdr) + sizeof(senderAddr->addr) + 1 + sizeof(long));
+		sizeof(MessageHdr) + sizeof(senderAddr.addr) + 1 + sizeof(long));
 	for (int i = 0; i < numGossipEntries; i++) {
 		// Parse data for this gossip entry.
 		int currId = *(int *)(gossipData + offset);
@@ -483,7 +481,7 @@ void MP1Node::handleGossipMessage(char* gossipData,
 
 		Address currAddress;
 		addressHandler->addressFromIdAndPort(&currAddress, currId, currPort);
-		logEvent("Received gossip message from %d.%d.%d.%d:%d", &currAddress);
+		logEvent("Received gossip message from %d.%d.%d.%d:%d", currAddress);
 		if (currAddress == memberNode->addr) {
 			continue;
 		}
@@ -492,17 +490,17 @@ void MP1Node::handleGossipMessage(char* gossipData,
 		auto currAddrIdx = memTableIdx.find(currAddressStr);
 		if (currAddrIdx == memTableIdx.end())
 		{
-			addMembershipEntry(&currAddress, currHeartbeat);
+			addMembershipEntry(currAddress, currHeartbeat);
 		}
 		else
 		{
 			MemberListEntry* currMle = &memberNode->memberList[currAddrIdx->second];
 			bool isActive = (
 				(par.getcurrtime() - currMle->gettimestamp()) <= MP1Node::tFail ||
-			  currAddress == *senderAddr);
+			  currAddress == senderAddr);
 			if (isActive && currHeartbeat > currMle->getheartbeat())
 			{
-				logEvent("Updating heartbeat for %d.%d.%d.%d:%d", &currAddress);
+				logEvent("Updating heartbeat for %d.%d.%d.%d:%d", currAddress);
 				memberNode->memberList[currAddrIdx->second] = MemberListEntry(
 					currId, currPort, currHeartbeat, par.getcurrtime());
 			}
@@ -527,7 +525,7 @@ void MP1Node::printMemberTable()
 			mleAddress.addr[1],
 			mleAddress.addr[2],
 			mleAddress.addr[3],
-			addressHandler->portFromAddress(&mleAddress),
+			addressHandler->portFromAddress(mleAddress),
 			mle->getheartbeat(),
 			mle->gettimestamp());
 	  log->logDebug(&memberNode->addr, logMsg);

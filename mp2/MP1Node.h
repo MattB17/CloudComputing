@@ -29,7 +29,7 @@ private:
 	const Params &par;
 	std::shared_ptr<Member> memberNode;
 	char NULLADDR[6];
-  AddressHandler *addressHandler;
+  std::unique_ptr<AddressHandler> addressHandler;
   double gossipProp;
   std::unordered_map<std::string, size_t> memTableIdx;
   std::string addrStr;
@@ -38,7 +38,7 @@ private:
   static const short tFail;
   static const short tGossip;
 
-  void logEvent(const char* eventMsg, Address* addr);
+  void logEvent(const char* eventMsg, const Address& addr);
   void logMsg(const char* msg);
   void cleanMemberList();
   std::vector<MemberListEntry> getActiveNodes();
@@ -46,15 +46,17 @@ private:
                   GossipMessage& gossipMsg);
   void handleGossipMessage(char* gossipData,
                            long numGossipEntries,
-                           Address* senderAddr);
-  void addMembershipEntry(Address* newAddr, long newHeartbeat);
+                           const Address& senderAddr);
+  void addMembershipEntry(Address& newAddr, long newHeartbeat);
   void printMemberTable();
   void incrementHeartbeat();
 
 public:
-	MP1Node(
-    std::shared_ptr<Member>, const Params &, std::shared_ptr<EmulNet>,
-    std::shared_ptr<Log>, Address);
+	MP1Node(std::shared_ptr<Member>,
+		      const Params&,
+					std::shared_ptr<EmulNet>,
+          std::shared_ptr<Log>,
+					Address);
 
 	std::shared_ptr<Member> getMemberNode() {
 		return memberNode;

@@ -91,9 +91,9 @@ void AddressHandler::addressFromIdAndPort(Address* addr, int id, short port)
  *
  * DESCRIPTION: extracts the id portion of `addr`.
  */
-int AddressHandler::idFromAddress(Address *addr)
+int AddressHandler::idFromAddress(const Address& addr)
 {
-	return *(int *)(addr->addr);
+	return *(int *)(addr.addr);
 }
 
 /**
@@ -101,7 +101,7 @@ int AddressHandler::idFromAddress(Address *addr)
  *
  * DESCRIPTION: extracts the port portion of `addr`.
  */
-short AddressHandler::portFromAddress(Address *addr)
+short AddressHandler::portFromAddress(const Address& addr)
 {
-	return *(short *)(&addr->addr[4]);
+	return *(short *)(&addr.addr[4]);
 }
