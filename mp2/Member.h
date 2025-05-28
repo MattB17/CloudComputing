@@ -52,7 +52,7 @@ public:
 	int numNeighbours; // number of neighbours
 	long heartbeat; // my heartbeat
 	int pingCounter; // counter for next ping
-	vector<MemberListEntry> memberList; // Membership table
+	std::vector<MemberListEntry> memberList; // Membership table
 	queue<q_elt> mp1q; // Queue for failure detection messages
 	queue<q_elt> mp2q; // Queue for KVstore messages
 	/**

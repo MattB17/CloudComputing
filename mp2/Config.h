@@ -34,6 +34,9 @@ public:
   static const std::string magicNumber;
   static const std::string debugLog;
   static const std::string statsLog;
+
+  // Membership variables
+  static const double gossipProportion;
 };
 
 #endif  // CONFIG_H_

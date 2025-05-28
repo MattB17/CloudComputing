@@ -21,7 +21,8 @@ MP1Node::MP1Node(std::shared_ptr<Member> member,
 	               const Params &params,
 								 std::shared_ptr<EmulNet> emul,
 								 std::shared_ptr<Log> log,
-								 Address address): par(params) {
+								 Address address): par(params)
+{
 	for( int i = 0; i < 6; i++ ) {
 		NULLADDR[i] = 0;
 	}
@@ -30,7 +31,6 @@ MP1Node::MP1Node(std::shared_ptr<Member> member,
 	this->log = log;
 	this->memberNode->addr = address;
 	this->addressHandler = std::make_unique<AddressHandler>();
-	this->gossipProp = 0.5;
 	this->addrStr = std::string(address.addr);
 }
 
@@ -45,7 +45,8 @@ MP1Node::~MP1Node() {}
  * DESCRIPTION: This function receives message from the network and pushes into the queue
  * 				This function is called by a node to receive messages currently waiting for it
  */
-int MP1Node::recvLoop() {
+int MP1Node::recvLoop()
+{
     if (memberNode->failed)
 		{
     	return false;
@@ -74,17 +75,12 @@ int MP1Node::enqueueWrapper(void *env, char *buff, int size)
  * 				All initializations routines for a member.
  * 				Called by the application layer.
  */
-void MP1Node::nodeStart(char *servaddrstr, short servport) {
-  Address joinaddr;
-  joinaddr = getJoinAddress();
+void MP1Node::nodeStart(char *servaddrstr, short servport)
+{
+	initThisNode();
 
-  // Self booting routines
-  if( initThisNode(&joinaddr) == -1 ) {
-		logMsg("init_thisnode failed. Exiting.");
-    exit(1);
-  }
-
-  if( !introduceSelfToGroup(&joinaddr) ) {
+  Address joinaddr = getJoinAddress();
+  if(!introduceSelfToGroup(joinaddr)) {
     finishUpThisNode();
 		logMsg("Unable to join self to group. Exiting.");
     exit(1);
@@ -98,7 +94,8 @@ void MP1Node::nodeStart(char *servaddrstr, short servport) {
  *
  * DESCRIPTION: Find out who I am and start up
  */
-int MP1Node::initThisNode(Address *joinaddr) {
+void MP1Node::initThisNode()
+{
 	memberNode->failed = false;
 	memberNode->inited = true;
 	memberNode->inGroup = false;
@@ -107,8 +104,6 @@ int MP1Node::initThisNode(Address *joinaddr) {
 	memberNode->heartbeat = 0;
 	memberNode->pingCounter = MP1Node::tGossip;
   initMemberListTable();
-
-  return 0;
 }
 
 /**
@@ -116,13 +111,16 @@ int MP1Node::initThisNode(Address *joinaddr) {
  *
  * DESCRIPTION: Join the distributed system
  */
-int MP1Node::introduceSelfToGroup(Address *joinaddr) {
-  if ( 0 == memcmp((char *)&(memberNode->addr.addr), (char *)&(joinaddr->addr), sizeof(memberNode->addr.addr))) {
+int MP1Node::introduceSelfToGroup(Address& joinaddr)
+{
+  if (memberNode->addr == joinaddr)
+	{
     // I am the group booter (first process to join the group). Boot up the group
 		logMsg("Starting up group...");
     memberNode->inGroup = true;
   }
-  else {
+  else
+	{
 		JoinMessage joinMsg = JoinMessage(&memberNode->addr,
 			                                MembershipMessageType::JOINREQ,
 																			&memberNode->heartbeat);
@@ -131,11 +129,11 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
     // send JOINREQ message to introducer member
 		// you send from your own address to the joinaddr, specifying the msg
 		// and its size
-    emulNet->ENsend(&memberNode->addr, joinaddr,
+    emulNet->ENsend(&memberNode->addr, &joinaddr,
 					          joinMsg.getMessage(), joinMsg.getMessageSize());
   }
 
-  return 1;
+	return 1;
 }
 
 /**
@@ -143,7 +141,8 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
  *
  * DESCRIPTION: Wind up this node and clean up state
  */
-int MP1Node::finishUpThisNode(){
+int MP1Node::finishUpThisNode()
+{
 	 this->memberNode->inGroup = false;
 	 this->emulNet->ENcleanup();
 
@@ -156,8 +155,10 @@ int MP1Node::finishUpThisNode(){
  * DESCRIPTION: Executed periodically at each member
  * 				Check your messages in queue and perform membership protocol duties
  */
-void MP1Node::nodeLoop() {
-    if (memberNode->failed) {
+void MP1Node::nodeLoop()
+{
+    if (memberNode->failed)
+		{
     	return;
     }
 
@@ -165,7 +166,7 @@ void MP1Node::nodeLoop() {
     checkMessages();
 
     // Wait until you're in the group...
-    if( !memberNode->inGroup ) {
+    if(!memberNode->inGroup) {
     	return;
     }
 
@@ -180,12 +181,14 @@ void MP1Node::nodeLoop() {
  *
  * DESCRIPTION: Check messages in the queue and call the respective message handler
  */
-void MP1Node::checkMessages() {
+void MP1Node::checkMessages()
+{
     void *ptr;
     int size;
 
     // Pop waiting messages from memberNode's mp1q
-    while ( !memberNode->mp1q.empty() ) {
+    while (!memberNode->mp1q.empty())
+		{
     	ptr = memberNode->mp1q.front().elt;
     	size = memberNode->mp1q.front().size;
     	memberNode->mp1q.pop();
@@ -199,13 +202,15 @@ void MP1Node::checkMessages() {
  *
  * DESCRIPTION: Message handler for different message types
  */
-bool MP1Node::recvCallBack(char *data, int size ) {
+bool MP1Node::recvCallBack(char *data, int size)
+{
   // Extract the message header and the address of the sender.
-	MessageHdr *msgHeader = (MessageHdr *)(data);
-	// Get a pointer to an Address and dereference it to get an Address.
+	// The *(T *) converts to a pointer to T then dereferences the pointer to
+	// get an element of type T.
+	MessageHdr msgHeader = *(MessageHdr *)(data);
 	Address senderAddr = *(Address *)(data + sizeof(MessageHdr));
 
-  if (msgHeader->msgType == GOSSIP)
+  if (msgHeader.msgType == GOSSIP)
 	{
 		// If it's a gossip message then the next long is the size of the
 		// sender's member table.
@@ -222,7 +227,7 @@ bool MP1Node::recvCallBack(char *data, int size ) {
 		long senderHeartbeat = *(long *)(
 			data + sizeof(MessageHdr) + sizeof(senderAddr.addr) + 1);
 
-	  if (msgHeader->msgType == MembershipMessageType::JOINREP)
+	  if (msgHeader.msgType == MembershipMessageType::JOINREP)
 	  {
 		  // We received a reply to our join request, so we are now in the group.
 		  memberNode->inGroup = true;
@@ -230,9 +235,8 @@ bool MP1Node::recvCallBack(char *data, int size ) {
 				"Received reply from %d.%d.%d.%d:%d for join request", senderAddr);
 
 		  addMembershipEntry(senderAddr, senderHeartbeat);
-
 	  }
-	  else if (msgHeader->msgType == MembershipMessageType::JOINREQ)
+	  else if (msgHeader.msgType == MembershipMessageType::JOINREQ)
 	  {
 		  // Received a JOINREQ so need to send a JOINREP as the response.
 			incrementHeartbeat();
@@ -258,7 +262,8 @@ bool MP1Node::recvCallBack(char *data, int size ) {
  *              and then delete the nodes.
  * 				      Propagate your membership list
  */
-void MP1Node::nodeLoopOps() {
+void MP1Node::nodeLoopOps()
+{
 	// Propagate the membership list if it's time to gossip again.
 	if (memberNode->pingCounter == 0)
 	{
@@ -270,10 +275,11 @@ void MP1Node::nodeLoopOps() {
 		std::vector<MemberListEntry> activeNodes = getActiveNodes();
 
 		// Next construct the gossip message.
-		GossipMessage gossipMsg = GossipMessage(&memberNode->addr, activeNodes);
+		std::unique_ptr<GossipMessage> gossipMsg = std::make_unique<GossipMessage>(
+			memberNode->addr, activeNodes);
 
 		// Send to a random subset of active neighbours
-		sendGossip(activeNodes, gossipMsg);
+		sendGossip(activeNodes, std::move(gossipMsg));
 
 		// Reset the ping counter.
 		memberNode->pingCounter = MP1Node::tGossip;
@@ -290,26 +296,13 @@ void MP1Node::nodeLoopOps() {
 }
 
 /**
- * FUNCTION NAME: isNullAddress
- *
- * DESCRIPTION: Function checks if the address is NULL
- */
-int MP1Node::isNullAddress(Address *addr) {
-	return (memcmp(addr->addr, NULLADDR, 6) == 0 ? 1 : 0);
-}
-
-/**
  * FUNCTION NAME: getJoinAddress
  *
  * DESCRIPTION: Returns the Address of the coordinator
  */
-Address MP1Node::getJoinAddress() {
-    Address joinaddr;
-
-    memset(&joinaddr, 0, sizeof(Address));
-		addressHandler->addressFromIdAndPort(&joinaddr, 1, 0);
-
-    return joinaddr;
+Address MP1Node::getJoinAddress()
+{
+	return addressHandler->addressFromIdAndPort(1, 0);
 }
 
 /**
@@ -317,7 +310,8 @@ Address MP1Node::getJoinAddress() {
  *
  * DESCRIPTION: Initialize the membership list
  */
-void MP1Node::initMemberListTable() {
+void MP1Node::initMemberListTable()
+{
 	memberNode->memberList.clear();
 	// Add self to the table
 	addMembershipEntry(memberNode->addr, memberNode->heartbeat);
@@ -327,13 +321,24 @@ void MP1Node::initMemberListTable() {
  * FUNCTION NAME: printAddress
  *
  * DESCRIPTION: Print the Address
+ *
+ * Currently not used but helpful for debugging.
  */
-void MP1Node::printAddress(Address *addr)
+void MP1Node::printAddress(const Address& addr)
 {
-    printf("%d.%d.%d.%d:%d \n",  addr->addr[0],addr->addr[1],addr->addr[2],
-           addr->addr[3], addressHandler->portFromAddress(*addr));
+    printf("%d.%d.%d.%d:%d \n",  addr.addr[0],addr.addr[1],addr.addr[2],
+           addr.addr[3], addressHandler->portFromAddress(addr));
 }
 
+/**
+ * FUNCTION NAME: addMembershipEntry
+ *
+ * DESCRIPTION: Adds a membership entry to the member table for `newAddr`
+ *              with heartbeat `newHeartbeat`.
+ *
+ * This method is only called for addresses that are not currently in the
+ * membership list table.
+ */
 void MP1Node::addMembershipEntry(Address& newAddr, long newHeartbeat)
 {
 	std::string newAddrStr(newAddr.addr);
@@ -362,7 +367,8 @@ void MP1Node::addMembershipEntry(Address& newAddr, long newHeartbeat)
  * DESCRIPTION: Logs an event that occurred at this node involving Address
  *              `addr` amd the message `eventMsg`.
  */
-void MP1Node::logEvent(const char* eventMsg, const Address& addr) {
+void MP1Node::logEvent(const char* eventMsg, const Address& addr)
+{
 	char logMsg[1024];
 	snprintf(logMsg, sizeof(logMsg), eventMsg,
 					 addr.addr[0],
@@ -378,7 +384,8 @@ void MP1Node::logEvent(const char* eventMsg, const Address& addr) {
  *
  * DESCRIPTION: logs a simple message given by `msg`.
  */
-void MP1Node::logMsg(const char* msg) {
+void MP1Node::logMsg(const char* msg)
+{
 	log->logDebug(&memberNode->addr, msg);
 }
 
@@ -389,21 +396,23 @@ void MP1Node::logMsg(const char* msg) {
  *              have been inactive for a while.
  *              The nodes' removal is logged.
  */
-void MP1Node::cleanMemberList() {
+void MP1Node::cleanMemberList()
+{
 	std::vector<MemberListEntry> cleanedMemberList;
-	for (int mleIdx = 0; mleIdx < memberNode->memberList.size(); mleIdx++) {
-		MemberListEntry *mle = &memberNode->memberList[mleIdx];
-
-		Address entryAddr;
-		addressHandler->addressFromIdAndPort(
-			&entryAddr, mle->getid(), mle->getport());
+	for (auto itr = memberNode->memberList.begin();
+       itr != memberNode->memberList.end();
+		   itr++)
+	{
+		Address entryAddr = addressHandler->addressFromIdAndPort(
+			itr->getid(),
+			itr->getport());
 		std::string entryAddrStr(entryAddr.addr);
 
-		if (par.getcurrtime() - mle->gettimestamp() <= MP1Node::tCleanup ||
+		if (par.getcurrtime() - itr->gettimestamp() <= MP1Node::tCleanup ||
 	      entryAddr == memberNode->addr)
 		{
 			memTableIdx[entryAddrStr] = cleanedMemberList.size();
-			cleanedMemberList.push_back(*mle);
+			cleanedMemberList.emplace_back(*itr);
 		}
 		else
 		{
@@ -422,14 +431,15 @@ void MP1Node::cleanMemberList() {
  * DESCRIPTION: Returns the subset of the member table corresponding to entry
  *              for nodes that have not failed.
  */
-std::vector<MemberListEntry> MP1Node::getActiveNodes() {
+std::vector<MemberListEntry> MP1Node::getActiveNodes()
+{
 	std::vector<MemberListEntry> activeNodes;
 	for (auto itr = memberNode->memberList.begin();
 			 itr != memberNode->memberList.end();
 			 itr++)
 	{
 		if ((par.getcurrtime() - itr->gettimestamp()) <= MP1Node::tFail) {
-			activeNodes.push_back(*itr);
+			activeNodes.emplace_back(*itr);
 		}
 	}
 	return activeNodes;
@@ -442,24 +452,25 @@ std::vector<MemberListEntry> MP1Node::getActiveNodes() {
  *              active members given by `activeNodes`.
  */
 void MP1Node::sendGossip(std::vector<MemberListEntry>& activeNodes,
-                         GossipMessage& gossipMsg)
+                         std::unique_ptr<GossipMessage> gossipMsg)
 {
 	std::random_device rd;
 	std::mt19937 g(rd());
 	std::shuffle(activeNodes.begin(), activeNodes.end(), g);
-	int neighborsInGossip = (int)(gossipProp * activeNodes.size());
+	int neighborsInGossip = (int)(Config::gossipProportion * activeNodes.size());
 
-  char* msg = gossipMsg.getMessage();
+  char* msg = gossipMsg->getMessage();
 
-	for (int i = 0; i < neighborsInGossip; i++) {
-		Address destAddr;
-		addressHandler->addressFromIdAndPort(
-			&destAddr, activeNodes[i].getid(), activeNodes[i].getport());
-		if (destAddr == memberNode->addr) {
+	for (int i = 0; i < neighborsInGossip; i++)
+	{
+		Address destAddr = addressHandler->addressFromIdAndPort(
+			activeNodes[i].getid(), activeNodes[i].getport());
+		if (destAddr == memberNode->addr)
+		{
 			continue;
 		}
 		emulNet->ENsend(&memberNode->addr, &destAddr,
-										msg, gossipMsg.getMessageSize());
+										msg, gossipMsg->getMessageSize());
 		logEvent("Sending gossip message to %d.%d.%d.%d:%d", destAddr);
 	}
 }
@@ -479,8 +490,8 @@ void MP1Node::handleGossipMessage(char* gossipData,
 		long currHeartbeat = *(long *)(gossipData + offset);
 		offset += sizeof(long);
 
-		Address currAddress;
-		addressHandler->addressFromIdAndPort(&currAddress, currId, currPort);
+		Address currAddress = addressHandler->addressFromIdAndPort(
+			currId, currPort);
 		logEvent("Received gossip message from %d.%d.%d.%d:%d", currAddress);
 		if (currAddress == memberNode->addr) {
 			continue;
@@ -513,9 +524,8 @@ void MP1Node::printMemberTable()
 	logMsg("Printing member list table:");
 	for (int i = 0; i < memberNode->memberList.size(); i++) {
 		MemberListEntry* mle = &memberNode->memberList[i];
-		Address mleAddress;
-		addressHandler->addressFromIdAndPort(
-			&mleAddress, mle->getid(), mle->getport());
+		Address mleAddress = addressHandler->addressFromIdAndPort(
+			mle->getid(), mle->getport());
 		static char logMsg[1024];
 	  snprintf(
 			logMsg,

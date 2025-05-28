@@ -79,11 +79,12 @@ void Address::init() {
  *
  * DESCRIPTION: builds Address `addr` from the supplied `id` and `port`.
  */
-void AddressHandler::addressFromIdAndPort(Address* addr, int id, short port)
+Address AddressHandler::addressFromIdAndPort(int id, short port)
 {
-	*(int *)(addr->addr) = id;
-	*(short *)(&addr->addr[4]) = port;
-	return;
+  Address addr;
+	*(int *)(addr.addr) = id;
+	*(short *)(&addr.addr[4]) = port;
+	return addr;
 }
 
 /**

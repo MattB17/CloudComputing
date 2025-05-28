@@ -21,3 +21,6 @@ const int Config::maxWrites = 1;
 const std::string Config::magicNumber = "CS425";
 const std::string Config::debugLog = "dbg.log";
 const std::string Config::statsLog = "stats.log";
+
+// Membership Variables
+const double Config::gossipProportion = 0.5;

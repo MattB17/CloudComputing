@@ -34,9 +34,10 @@ protected:
 	MessageHdr *msg;
 
 public:
+  virtual ~MembershipMessage() = 0;
   // Abstract method to construct the actual message.
 	virtual char* getMessage() = 0;
-  
+
 	size_t getMessageSize() { return msgSize; }
 };
 
@@ -63,7 +64,8 @@ public:
  */
 class GossipMessage : public MembershipMessage {
 public:
-	GossipMessage(Address* fromAddr, std::vector<MemberListEntry>& memTable);
+	GossipMessage(const Address& fromAddr,
+                std::vector<MemberListEntry>& memTable);
 	~GossipMessage();
 	char* getMessage();
 };

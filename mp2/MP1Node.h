@@ -30,7 +30,6 @@ private:
 	std::shared_ptr<Member> memberNode;
 	char NULLADDR[6];
   std::unique_ptr<AddressHandler> addressHandler;
-  double gossipProp;
   std::unordered_map<std::string, size_t> memTableIdx;
   std::string addrStr;
 
@@ -38,18 +37,21 @@ private:
   static const short tFail;
   static const short tGossip;
 
+  void initThisNode();
+	int introduceSelfToGroup(Address& joinAddress);
   void logEvent(const char* eventMsg, const Address& addr);
   void logMsg(const char* msg);
   void cleanMemberList();
   std::vector<MemberListEntry> getActiveNodes();
   void sendGossip(std::vector<MemberListEntry>& activeNodes,
-                  GossipMessage& gossipMsg);
+                  std::unique_ptr<GossipMessage> gossipMsg);
   void handleGossipMessage(char* gossipData,
                            long numGossipEntries,
                            const Address& senderAddr);
   void addMembershipEntry(Address& newAddr, long newHeartbeat);
   void printMemberTable();
   void incrementHeartbeat();
+	void printAddress(const Address& addr);
 
 public:
 	MP1Node(std::shared_ptr<Member>,
@@ -64,17 +66,13 @@ public:
 	int recvLoop();
 	static int enqueueWrapper(void *env, char *buff, int size);
 	void nodeStart(char *servaddrstr, short serverport);
-	int initThisNode(Address *joinaddr);
-	int introduceSelfToGroup(Address *joinAddress);
 	int finishUpThisNode();
 	void nodeLoop();
 	void checkMessages();
 	bool recvCallBack(char *data, int size);
 	void nodeLoopOps();
-	int isNullAddress(Address *addr);
 	Address getJoinAddress();
 	void initMemberListTable();
-	void printAddress(Address *addr);
 	virtual ~MP1Node();
 };
 

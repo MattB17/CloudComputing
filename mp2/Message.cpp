@@ -5,6 +5,8 @@
  **********************************/
 #include "Message.h"
 
+MembershipMessage::~MembershipMessage() {}
+
 /**
  * JoinMessage constructor.
  *
@@ -50,14 +52,14 @@ char* JoinMessage::getMessage()
  * The gossip message is built from the Address `fromAddr` and the active nodes
  * in `memTable`.
  */
-GossipMessage::GossipMessage(Address* fromAddr,
+GossipMessage::GossipMessage(const Address& fromAddr,
 														std::vector<MemberListEntry>& memTable)
 {
   long numEntries = memTable.size();
 
   // Will have message header, followed by source address, 1 bit for null
   // terminator, and then the number of entries in the membership table.
-  msgSize = sizeof(MessageHdr) + sizeof(fromAddr->addr) + 1 + sizeof(long);
+  msgSize = sizeof(MessageHdr) + sizeof(fromAddr.addr) + 1 + sizeof(long);
   // For each active entry in the membership table we will send its id, port,
   // and heartbeat (we don't need to send the timestamp as that is local time
 	// and won't be used by the receiving process)
@@ -67,13 +69,13 @@ GossipMessage::GossipMessage(Address* fromAddr,
   // and size of membership table.
   msg = (MessageHdr *) malloc(msgSize * sizeof(char));
   msg->msgType = GOSSIP;
-	memcpy((char *)(msg + 1), &fromAddr->addr, sizeof(fromAddr->addr));
+	memcpy((char *)(msg + 1), &fromAddr.addr, sizeof(fromAddr.addr));
   memcpy(
-	 (char *)(msg + 1) + sizeof(fromAddr->addr) + 1, &numEntries, sizeof(long));
+	 (char *)(msg + 1) + sizeof(fromAddr.addr) + 1, &numEntries, sizeof(long));
 
 
   // Now fill in all the member entries.
-  size_t offset = sizeof(fromAddr->addr) + 1 + sizeof(long);
+  size_t offset = sizeof(fromAddr.addr) + 1 + sizeof(long);
   for (auto itr = memTable.begin(); itr != memTable.end(); itr++) {
 	  int id = itr->getid();
 	  short port = itr->getport();
