@@ -5,6 +5,8 @@
  **********************************/
 #include "MP2Node.h"
 
+int MP2Node::transactionId = 0;
+
 /**
  * constructor
  */
@@ -12,12 +14,14 @@ MP2Node::MP2Node(std::shared_ptr<Member> memberNode,
 	               const Params &par,
 								 std::shared_ptr<EmulNet> emulNet,
 								 std::shared_ptr<Log> log,
-								 Address address): par(par) {
+								 Address address): par(par)
+{
 	this->memberNode = memberNode;
 	this->emulNet = emulNet;
 	this->log = log;
 	ht = std::make_unique<HashTable>();
 	this->memberNode->addr = address;
+	this->addressHandler = std::make_unique<AddressHandler>();
 }
 
 /**
@@ -44,7 +48,7 @@ void MP2Node::updateRing()
 	/*
 	 *  Step 1. Get the current membership list from Membership Protocol / MP1
 	 *
-	 * Note this membership list will consist on nodes and their addresses.
+	 * This membership list will consist of nodes and their addresses.
 	 */
 	currMemList = getMembershipList();
 
@@ -75,6 +79,8 @@ void MP2Node::updateRing()
 		}
 	}
 
+  // This is to check if we are on our first pass (so the ring hasn't been
+  // initialized).
   bool ringUninitialized = this->haveReplicasOf.size() == 0;
 	// Then assign the current membership list to the ring
 	this->ring = currMemList;
@@ -105,18 +111,17 @@ void MP2Node::updateRing()
  * 				a) Address of the node
  * 				b) Hash code obtained by consistent hashing of the Address
  */
-vector<Node> MP2Node::getMembershipList() {
-	unsigned int i;
-	vector<Node> curMemList;
-	for ( i = 0 ; i < this->memberNode->memberList.size(); i++ ) {
-		Address addressOfThisMember;
-		int id = this->memberNode->memberList.at(i).getid();
-		short port = this->memberNode->memberList.at(i).getport();
-		memcpy(&addressOfThisMember.addr[0], &id, sizeof(int));
-		memcpy(&addressOfThisMember.addr[4], &port, sizeof(short));
-		curMemList.emplace_back(Node(addressOfThisMember));
+std::vector<Node> MP2Node::getMembershipList()
+{
+	std::vector<Node> currMemList;
+	for (auto memberPtr = this->memberNode->memberList.begin();
+       memberPtr != this->memberNode->memberList.end();
+		   memberPtr++)
+	{
+		currMemList.emplace_back(Node(this->addressHandler->addressFromIdAndPort(
+				memberPtr->getid(), memberPtr->getport())));
 	}
-	return curMemList;
+	return currMemList;
 }
 
 /**
@@ -128,7 +133,8 @@ vector<Node> MP2Node::getMembershipList() {
  * RETURNS:
  * size_t position on the ring
  */
-size_t MP2Node::hashFunction(string key) {
+size_t MP2Node::hashFunction(string key)
+{
 	std::hash<string> hashFunc;
 	size_t ret = hashFunc(key);
 	return ret % Config::ringSize;
@@ -143,7 +149,8 @@ size_t MP2Node::hashFunction(string key) {
  * 				2) Finds the replicas of this key
  * 				3) Sends a message to the replica
  */
-void MP2Node::clientCreate(string key, string value) {
+void MP2Node::clientCreate(string key, string value)
+{
 	std::vector<Node> replicas = findNodes(key);
 	std::vector<ReplicaType> replicaTypes = {
 		ReplicaType::PRIMARY, ReplicaType::SECONDARY, ReplicaType::TERTIARY};
@@ -163,7 +170,7 @@ void MP2Node::clientCreate(string key, string value) {
 		  value,
 		  replicaTypes[rIdx]);
 		// Send the create message to the replica.
-		this->sendMsg(&(replicas[rIdx].nodeAddress), cMsg);
+		this->sendMsg(replicas[rIdx].nodeAddress, cMsg);
 	}
 
   // Keep a record of the pending transaction.
@@ -198,7 +205,7 @@ void MP2Node::clientRead(string key)
 			key);
 
 		// Send the read message to the replica.
-		this->sendMsg(&(replicas[rIdx].nodeAddress), rMsg);
+		this->sendMsg(replicas[rIdx].nodeAddress, rMsg);
 	}
 
 	// Keep a record of the pending read transaction.
@@ -236,7 +243,7 @@ void MP2Node::clientUpdate(string key, string value)
 			replicaTypes[rIdx]);
 
 		// Send the message to the replica
-		this->sendMsg(&(replicas[rIdx].nodeAddress), rMsg);
+		this->sendMsg(replicas[rIdx].nodeAddress, rMsg);
 	}
 
 	// The coordinator will track the pending transaction
@@ -270,7 +277,7 @@ void MP2Node::clientDelete(string key){
 			key);
 
 		// Send the delete message to the replica.
-		this->sendMsg(&(replicas[rIdx].nodeAddress), dMsg);
+		this->sendMsg(replicas[rIdx].nodeAddress, dMsg);
 	}
 
 	// Keep a record of the pending transaction.
@@ -618,8 +625,8 @@ void MP2Node::stabilizationProtocol() {
 			// predecessors have failed, so issue 2 creates to my new neighbours.
 			if (oldType == ReplicaType::TERTIARY)
 			{
-				this->sendMsg(&(this->hasMyReplicas[0].nodeAddress), secondaryMsg);
-				this->sendMsg(&(this->hasMyReplicas[1].nodeAddress), tertiaryMsg);
+				this->sendMsg(this->hasMyReplicas[0].nodeAddress, secondaryMsg);
+				this->sendMsg(this->hasMyReplicas[1].nodeAddress, tertiaryMsg);
 			}
 			else if (oldType == ReplicaType::SECONDARY)
 			{
@@ -635,12 +642,12 @@ void MP2Node::stabilizationProtocol() {
 				// Otherwise, the original TERTIARY also failed so just issue a
 				// create for the now SECONDARY node (ie. don't change the
 				// KVMessageType).
-				this->sendMsg(&(this->hasMyReplicas[0].nodeAddress), secondaryMsg);
+				this->sendMsg(this->hasMyReplicas[0].nodeAddress, secondaryMsg);
 
 				// And as we are assuming no rejoins / new nodes, the now 2nd successor
 				// of this node has never seen the key (as this node was SECONDARY but
 			  // is now PRIMARY). So we just create the third replica.
-				this->sendMsg(&(this->hasMyReplicas[1].nodeAddress), tertiaryMsg);
+				this->sendMsg(this->hasMyReplicas[1].nodeAddress, tertiaryMsg);
 			}
 			else
 			{
@@ -653,9 +660,9 @@ void MP2Node::stabilizationProtocol() {
 				{
 					// So update the successor to now have the SECONDARY.
 					secondaryMsg.type = KVMessageType::UPDATE;
-					this->sendMsg(&(this->hasMyReplicas[0].nodeAddress), secondaryMsg);
+					this->sendMsg(this->hasMyReplicas[0].nodeAddress, secondaryMsg);
 					// And my now second successor has not seen the key before.
-					this->sendMsg(&(this->hasMyReplicas[1].nodeAddress), tertiaryMsg);
+					this->sendMsg(this->hasMyReplicas[1].nodeAddress, tertiaryMsg);
 				}
 				// 2. My successor has not changed meaning it has my secondary.
 				else if (this->hasMyReplicas[0].nodeAddress ==
@@ -666,7 +673,7 @@ void MP2Node::stabilizationProtocol() {
 					if (!(this->hasMyReplicas[1].nodeAddress ==
 						    oldHasMyReplicas[1].nodeAddress))
 					{
-						this->sendMsg(&(this->hasMyReplicas[1].nodeAddress), tertiaryMsg);
+						this->sendMsg(this->hasMyReplicas[1].nodeAddress, tertiaryMsg);
 					}
 					// Otherwise, both are intact so do nothing.
 				}
@@ -674,8 +681,8 @@ void MP2Node::stabilizationProtocol() {
 				// successor, meaning both failed. So create both messages.
 				else
 				{
-					this->sendMsg(&(this->hasMyReplicas[0].nodeAddress), secondaryMsg);
-					this->sendMsg(&(this->hasMyReplicas[1].nodeAddress), tertiaryMsg);
+					this->sendMsg(this->hasMyReplicas[0].nodeAddress, secondaryMsg);
+					this->sendMsg(this->hasMyReplicas[1].nodeAddress, tertiaryMsg);
 				}
 			}
 		}
@@ -762,7 +769,7 @@ void MP2Node::handleReadMessage(Message& msg)
 		msg.transID,
 		this->memberNode->addr,
 		val);
-	this->sendMsg(&(msg.fromAddr), replyMsg);
+	this->sendMsg(msg.fromAddr, replyMsg);
 }
 
 /**
@@ -1054,8 +1061,8 @@ void MP2Node::logWriteFailure(int transId)
  */
 int MP2Node::getTransactionId()
 {
-	int transId = g_transID;
-	g_transID++;
+	int transId = MP2Node::transactionId;
+	MP2Node::transactionId++;
 	return transId;
 }
 
@@ -1076,7 +1083,7 @@ void MP2Node::sendReplyToCoordinator(Message& coordMsg, bool operationSucceeded)
 		operationSucceeded);
 
 	// Send the reply to the coordinator
-	this->sendMsg(&(coordMsg.fromAddr), replyMsg);
+	this->sendMsg(coordMsg.fromAddr, replyMsg);
 }
 
 /**
@@ -1235,10 +1242,10 @@ void MP2Node::setNeighbourhood(int myPosOnRing)
  * DESCRIPTION: a helper message for sending a message `msg` over the network
  *              from this node to the node with address `toAddr`.
  */
-void MP2Node::sendMsg(Address *toAddr, Message& msg)
+void MP2Node::sendMsg(Address& toAddr, const Message& msg)
 {
 	this->emulNet->ENsend(
 		&(this->memberNode->addr),
-		toAddr,
+		&toAddr,
 		msg.toString());
 }

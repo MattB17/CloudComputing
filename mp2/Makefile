@@ -44,7 +44,7 @@ MP2Node.o: MP2Node.cpp MP2Node.h EmulNet.h Params.h Address.h Member.h Node.h Ha
 Node.o: Node.cpp Node.h Address.h Member.h
 	g++ -c Node.cpp ${CFLAGS}
 
-HashTable.o: HashTable.cpp HashTable.h common.h Entry.h
+HashTable.o: HashTable.cpp HashTable.h Entry.h
 	g++ -c HashTable.cpp ${CFLAGS}
 
 Entry.o: Entry.cpp Entry.h Message.h
@@ -53,7 +53,7 @@ Entry.o: Entry.cpp Entry.h Message.h
 Config.o: Config.cpp Config.h
 	g++ -c Config.cpp ${CFLAGS}
 
-Message.o: Message.cpp Message.h Address.h Member.h common.h
+Message.o: Message.cpp Message.h Address.h Member.h
 	g++ -c Message.cpp ${CFLAGS}
 
 clean:

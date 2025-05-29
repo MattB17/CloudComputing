@@ -32,7 +32,7 @@ public:
   bool operator ==(const Address &anotherAddress);
   bool operator !=(const Address &anotherAddress);
 
-  string getAddress();
+  string getAddress() const;
   void init();
 };
 

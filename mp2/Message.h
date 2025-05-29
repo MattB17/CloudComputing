@@ -9,7 +9,32 @@
 #include "stdincludes.h"
 #include "Address.h"
 #include "Member.h"
-#include "common.h"
+
+// enum of replica types
+enum ReplicaType
+{
+  PRIMARY,
+  SECONDARY,
+  TERTIARY
+};
+
+enum MembershipMessageType
+{
+  JOIN_REQUEST,
+  JOIN_REPLY,
+  GOSSIP
+};
+
+// message types, reply is the message from node to coordinator
+enum KVMessageType
+{
+  CREATE,
+  READ,
+  UPDATE,
+  DELETE,
+  WRITE_REPLY,  // Write reply from node to coordinator
+  READ_REPLY // Read reply from node to coordinator
+};
 
 /**
  * STRUCT NAME: MessageHdr
@@ -45,7 +70,7 @@ public:
 /**
  * CLASS NAME: JoinMessage
  *
- * DESCRIPTION: Used to build join (JOINREP or JOINREQ) messages.
+ * DESCRIPTION: Used to build join (JOIN_REPLY or JOIN_REQUEST) messages.
  */
 class JoinMessage : public MembershipMessage {
 public:
@@ -102,7 +127,7 @@ public:
 	Message(int _transID, Address _fromAddr, string _value);
 	Message& operator = (const Message& anotherMessage);
 	// serialize to a string
-	std::string toString();
+	std::string toString() const;
 };
 
 #endif

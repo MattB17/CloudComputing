@@ -57,7 +57,7 @@ bool Address::operator !=(const Address& anotherAddress)
  *
  * DESCRIPTION: Returns a string representing the address.
  */
-string Address::getAddress() {
+string Address::getAddress() const {
   int id = 0;
   short port;
   memcpy(&id, &addr[0], sizeof(int));

@@ -122,11 +122,11 @@ int MP1Node::introduceSelfToGroup(Address& joinaddr)
   else
 	{
 		JoinMessage joinMsg = JoinMessage(&memberNode->addr,
-			                                MembershipMessageType::JOINREQ,
+			                                MembershipMessageType::JOIN_REQUEST,
 																			&memberNode->heartbeat);
 		logMsg("Trying to join...");
 
-    // send JOINREQ message to introducer member
+    // send JOIN_REQUEST message to introducer member
 		// you send from your own address to the joinaddr, specifying the msg
 		// and its size
     emulNet->ENsend(&memberNode->addr, &joinaddr,
@@ -227,7 +227,7 @@ bool MP1Node::recvCallBack(char *data, int size)
 		long senderHeartbeat = *(long *)(
 			data + sizeof(MessageHdr) + sizeof(senderAddr.addr) + 1);
 
-	  if (msgHeader.msgType == MembershipMessageType::JOINREP)
+	  if (msgHeader.msgType == MembershipMessageType::JOIN_REPLY)
 	  {
 		  // We received a reply to our join request, so we are now in the group.
 		  memberNode->inGroup = true;
@@ -236,12 +236,12 @@ bool MP1Node::recvCallBack(char *data, int size)
 
 		  addMembershipEntry(senderAddr, senderHeartbeat);
 	  }
-	  else if (msgHeader.msgType == MembershipMessageType::JOINREQ)
+	  else if (msgHeader.msgType == MembershipMessageType::JOIN_REQUEST)
 	  {
-		  // Received a JOINREQ so need to send a JOINREP as the response.
+		  // Received a JOIN_REQUEST so need to send a JOIN_REPLY as the response.
 			incrementHeartbeat();
 		  JoinMessage joinMsg = JoinMessage(&memberNode->addr,
-				                                MembershipMessageType::JOINREP,
+				                                MembershipMessageType::JOIN_REPLY,
 																				&memberNode->heartbeat);
 
 		  emulNet->ENsend(&(memberNode->addr), &senderAddr,
@@ -481,7 +481,8 @@ void MP1Node::handleGossipMessage(char* gossipData,
 {
 	size_t offset = (
 		sizeof(MessageHdr) + sizeof(senderAddr.addr) + 1 + sizeof(long));
-	for (int i = 0; i < numGossipEntries; i++) {
+	for (int i = 0; i < numGossipEntries; i++)
+	{
 		// Parse data for this gossip entry.
 		int currId = *(int *)(gossipData + offset);
 		offset += sizeof(int);
@@ -493,7 +494,8 @@ void MP1Node::handleGossipMessage(char* gossipData,
 		Address currAddress = addressHandler->addressFromIdAndPort(
 			currId, currPort);
 		logEvent("Received gossip message from %d.%d.%d.%d:%d", currAddress);
-		if (currAddress == memberNode->addr) {
+		if (currAddress == memberNode->addr)
+		{
 			continue;
 		}
 
@@ -519,13 +521,20 @@ void MP1Node::handleGossipMessage(char* gossipData,
 	}
 }
 
+/**
+ * FUNCTION NAME: printMemberTable
+ *
+ * DESCRIPTION: prints the membership table to the log.
+ */
 void MP1Node::printMemberTable()
 {
 	logMsg("Printing member list table:");
-	for (int i = 0; i < memberNode->memberList.size(); i++) {
-		MemberListEntry* mle = &memberNode->memberList[i];
+	for (auto itr = memberNode->memberList.begin();
+       itr != memberNode->memberList.end();
+		   itr++)
+	{
 		Address mleAddress = addressHandler->addressFromIdAndPort(
-			mle->getid(), mle->getport());
+			itr->getid(), itr->getport());
 		static char logMsg[1024];
 	  snprintf(
 			logMsg,
@@ -536,8 +545,8 @@ void MP1Node::printMemberTable()
 			mleAddress.addr[2],
 			mleAddress.addr[3],
 			addressHandler->portFromAddress(mleAddress),
-			mle->getheartbeat(),
-			mle->gettimestamp());
+			itr->getheartbeat(),
+			itr->gettimestamp());
 	  log->logDebug(&memberNode->addr, logMsg);
 	}
 }
@@ -546,7 +555,8 @@ void MP1Node::incrementHeartbeat()
 {
 	memberNode->heartbeat++;
 	auto itr = memTableIdx.find(addrStr);
-	if (itr == memTableIdx.end()) {
+	if (itr == memTableIdx.end())
+	{
 		logMsg("Something has gone wrong, cannot find self!");
 		exit(1);
 	}

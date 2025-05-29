@@ -233,7 +233,7 @@ Message::Message(int _transID, Address _fromAddr, string _value)
  *
  * DESCRIPTION: Serialized Message in string format
  */
-std::string Message::toString()
+std::string Message::toString() const
 {
 	std::string message = (to_string(transID) + delimiter +
 	  fromAddr.getAddress() + delimiter + to_string(type) + delimiter);

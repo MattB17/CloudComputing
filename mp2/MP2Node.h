@@ -7,9 +7,6 @@
 #ifndef MP2NODE_H_
 #define MP2NODE_H_
 
-/**
- * Header files
- */
 #include "stdincludes.h"
 #include "Config.h"
 #include "Address.h"
@@ -38,18 +35,13 @@ private:
 	std::vector<Node> hasMyReplicas;
 	// Vector holding the previous two neighbors in the ring whose replicas I have
 	std::vector<Node> haveReplicasOf;
-	// Ring
 	std::vector<Node> ring;
-	// Hash Table
 	std::unique_ptr<HashTable> ht;
-	// Member representing this member
-	std::shared_ptr<Member> memberNode;
-	// Params object
+	std::shared_ptr<Member> memberNode; // This member
 	const Params &par;
-	// Object of EmulNet
 	std::shared_ptr<EmulNet> emulNet;
-	// Object of Log
 	std::shared_ptr<Log> log;
+	std::unique_ptr<AddressHandler> addressHandler;
 
   // Stores replica metadata, that is the replica type for the given key.
 	// This could be extended to hold other metadata in the future.
@@ -59,6 +51,8 @@ private:
 	std::unordered_map<int, WriteTransactionState> pendingWrites;
 	// Tracks reads initiated by this node.
 	std::unordered_map<int, ReadTransactionState> pendingReads;
+
+	static int transactionId;
 
 	void handleCreateMessage(Message& msg);
 	void handleReadMessage(Message& msg);
@@ -89,7 +83,7 @@ private:
 	bool iAmPrimary(string key, int myIdx);
 
   // Helper method for sending messages.
-	void sendMsg(Address *toAddr, Message& msg);
+	void sendMsg(Address& toAddr, const Message& msg);
 
 public:
 	MP2Node(

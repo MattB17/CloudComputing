@@ -18,7 +18,6 @@
 #include "Queue.h"
 #include "MP2Node.h"
 #include "Node.h"
-#include "common.h"
 
 /**
  * CLASS NAME: Application
