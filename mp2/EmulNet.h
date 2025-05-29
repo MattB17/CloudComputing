@@ -88,9 +88,16 @@ public:
  	EmulNet& operator = (EmulNet &anotherEmulNet);
  	virtual ~EmulNet();
 	Address ENinit();
-	int ENsend(Address *myaddr, Address *toaddr, string data);
-	int ENsend(Address *myaddr, Address *toaddr, char *data, int size);
-	int ENrecv(Address *myaddr, int (* enq)(void *, char *, int), struct timeval *t, int times, void *queue);
+	int ENsend(const Address& myaddr, const Address& toaddr, std::string data);
+	int ENsend(const Address& myaddr,
+		         const Address& toaddr,
+						 char* data,
+						 int size);
+	int ENrecv(const Address& myaddr,
+		         int (* enq)(void *, char *, int),
+						 struct timeval *t,
+						 int times,
+						 void *queue);
 	int ENcleanup();
 };
 

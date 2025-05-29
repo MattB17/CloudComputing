@@ -410,7 +410,7 @@ void MP2Node::checkMessages() {
 			  handleUpdateMessage(msg);
 				break;
 			case KVMessageType::WRITE_REPLY:
-			  handleReplyMessage(msg);
+			  handleWriteReplyMessage(msg);
 				break;
 			case KVMessageType::READ_REPLY:
 			  handleReadReplyMessage(msg);
@@ -503,8 +503,7 @@ bool MP2Node::recvLoop() {
     }
     else {
     	return emulNet->ENrecv(
-				&(memberNode->addr), this->enqueueWrapper,
-				NULL, 1, &(memberNode->mp2q));
+				memberNode->addr, this->enqueueWrapper, NULL, 1, &(memberNode->mp2q));
     }
 }
 
@@ -699,7 +698,7 @@ void MP2Node::stabilizationProtocol() {
  *              3) Sends a reply back to the client node that initiated the
  *                 create.
  */
-void MP2Node::handleCreateMessage(Message& msg)
+void MP2Node::handleCreateMessage(const Message& msg)
 {
 	bool created = this->createKeyValue(msg.key, msg.value, msg.replica);
 
@@ -740,7 +739,7 @@ void MP2Node::handleCreateMessage(Message& msg)
  *              2) Logs whether the read was successful
  *              3) Sends a read reply back to the coordinator
  */
-void MP2Node::handleReadMessage(Message& msg)
+void MP2Node::handleReadMessage(const Message& msg)
 {
 	string val = this->readKey(msg.key);
 
@@ -782,7 +781,7 @@ void MP2Node::handleReadMessage(Message& msg)
  *              3) Sends a reply back to the client node that initiated the
  *                 delete.
  */
-void MP2Node::handleDeleteMessage(Message& msg)
+void MP2Node::handleDeleteMessage(const Message& msg)
 {
 	bool deleted = this->deletekey(msg.key);
 
@@ -822,7 +821,7 @@ void MP2Node::handleDeleteMessage(Message& msg)
  *              3) Sends a reply back to the client node that initiated the
  *                 update.
  */
-void MP2Node::handleUpdateMessage(Message& msg)
+void MP2Node::handleUpdateMessage(const Message& msg)
 {
 	bool updated = this->updateKeyValue(msg.key, msg.value, msg.replica);
 
@@ -855,7 +854,7 @@ void MP2Node::handleUpdateMessage(Message& msg)
 }
 
 /*
- * FUNCTION NAME: handleReplyMessage
+ * FUNCTION NAME: handleWriteReplyMessage
  *
  * DESCRIPTION: Handles receipt of a reply message on the server side.
  *              That is, it
@@ -867,7 +866,7 @@ void MP2Node::handleUpdateMessage(Message& msg)
  *              4) If all replies have been completed for the transaction then
  *                 the transaction is marked as completed.
  */
-void MP2Node::handleReplyMessage(Message& msg)
+void MP2Node::handleWriteReplyMessage(const Message& msg)
 {
 	auto txnPointer = this->pendingWrites.find(msg.transID);
 	if (txnPointer == this->pendingWrites.end())
@@ -913,7 +912,7 @@ void MP2Node::handleReplyMessage(Message& msg)
  *              4) Removes the transaction and logs failure if no quorum could
  *                 be reached.
  */
-void MP2Node::handleReadReplyMessage(Message& msg)
+void MP2Node::handleReadReplyMessage(const Message& msg)
 {
 	auto readTxnPointer = this->pendingReads.find(msg.transID);
 	if (readTxnPointer == this->pendingReads.end())
@@ -1074,7 +1073,8 @@ int MP2Node::getTransactionId()
  *              `operationSucceeded` is a boolean representing whether the
  *              operation succeeded on the node.
  */
-void MP2Node::sendReplyToCoordinator(Message& coordMsg, bool operationSucceeded)
+void MP2Node::sendReplyToCoordinator(const Message& coordMsg,
+	                                   bool operationSucceeded)
 {
 	// Construct the reply message.
 	Message replyMsg = Message(
@@ -1242,10 +1242,8 @@ void MP2Node::setNeighbourhood(int myPosOnRing)
  * DESCRIPTION: a helper message for sending a message `msg` over the network
  *              from this node to the node with address `toAddr`.
  */
-void MP2Node::sendMsg(Address& toAddr, const Message& msg)
+void MP2Node::sendMsg(const Address& toAddr, const Message& msg)
 {
 	this->emulNet->ENsend(
-		&(this->memberNode->addr),
-		&toAddr,
-		msg.toString());
+		this->memberNode->addr, toAddr, msg.toString());
 }

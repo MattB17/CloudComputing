@@ -54,18 +54,19 @@ private:
 
 	static int transactionId;
 
-	void handleCreateMessage(Message& msg);
-	void handleReadMessage(Message& msg);
-	void handleDeleteMessage(Message& msg);
-	void handleUpdateMessage(Message& msg);
-	void handleReplyMessage(Message& msg);
-	void handleReadReplyMessage(Message& msg);
+	void handleCreateMessage(const Message& msg);
+	void handleReadMessage(const Message& msg);
+	void handleDeleteMessage(const Message& msg);
+	void handleUpdateMessage(const Message& msg);
+	void handleWriteReplyMessage(const Message& msg);
+	void handleReadReplyMessage(const Message& msg);
 
 	void logWriteSuccess(int transId);
 	void logWriteFailure(int transId);
 
 	int getTransactionId();
-	void sendReplyToCoordinator(Message& coordMsg, bool operationSucceeded);
+	void sendReplyToCoordinator(const Message& coordMsg,
+		                          bool operationSucceeded);
 
 	// Cleans up any transactions that have expired, recording failures if a
 	// quorum was not reached.
@@ -83,7 +84,7 @@ private:
 	bool iAmPrimary(string key, int myIdx);
 
   // Helper method for sending messages.
-	void sendMsg(Address& toAddr, const Message& msg);
+	void sendMsg(const Address& toAddr, const Message& msg);
 
 public:
 	MP2Node(

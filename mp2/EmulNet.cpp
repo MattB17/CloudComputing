@@ -92,7 +92,10 @@ Address EmulNet::ENinit()
  * RETURNS:
  * size
  */
-int EmulNet::ENsend(Address *myaddr, Address *toaddr, char *data, int size)
+int EmulNet::ENsend(const Address& myaddr,
+	                  const Address& toaddr,
+										char *data,
+										int size)
 {
 	en_msg *em;
 	static char temp[2048];
@@ -106,13 +109,13 @@ int EmulNet::ENsend(Address *myaddr, Address *toaddr, char *data, int size)
 	em = (en_msg *)malloc(sizeof(en_msg) + size);
 	em->size = size;
 
-	memcpy(&(em->from.addr), &(myaddr->addr), sizeof(em->from.addr));
-	memcpy(&(em->to.addr), &(toaddr->addr), sizeof(em->from.addr));
+	memcpy(&(em->from.addr), &(myaddr.addr), sizeof(em->from.addr));
+	memcpy(&(em->to.addr), &(toaddr.addr), sizeof(em->from.addr));
 	memcpy(em + 1, data, size);
 
 	emulnet.buff[emulnet.currbuffsize++] = em;
 
-	int src = *(int *)(myaddr->addr);
+	int src = *(int *)(myaddr.addr);
 	int time = par->getcurrtime();
 
 	assert(src <= Config::maxNodes);
@@ -122,8 +125,8 @@ int EmulNet::ENsend(Address *myaddr, Address *toaddr, char *data, int size)
 
 	snprintf(temp, sizeof(temp),
 		       "Sending 4+%d B msg type %d to %d.%d.%d.%d:%d ",
-					 size-4, *(int *)data, toaddr->addr[0], toaddr->addr[1],
-					 toaddr->addr[2], toaddr->addr[3], *(short *)&toaddr->addr[4]);
+					 size-4, *(int *)data, toaddr.addr[0], toaddr.addr[1],
+					 toaddr.addr[2], toaddr.addr[3], *(short *)&(toaddr.addr[4]));
 
 	return size;
 }
@@ -136,7 +139,9 @@ int EmulNet::ENsend(Address *myaddr, Address *toaddr, char *data, int size)
  * RETURNS:
  * size
  */
-int EmulNet::ENsend(Address *myaddr, Address *toaddr, string data)
+int EmulNet::ENsend(const Address& myaddr,
+	                  const Address& toaddr,
+										std::string data)
 {
 	char * str = (char *) malloc(data.length() * sizeof(char));
 	memcpy(str, data.c_str(), data.size());
@@ -153,7 +158,7 @@ int EmulNet::ENsend(Address *myaddr, Address *toaddr, string data)
  * RETURN:
  * 0
  */
-int EmulNet::ENrecv(Address *myaddr,
+int EmulNet::ENrecv(const Address& myaddr,
 	                  int (* enq)(void *, char *, int),
 										struct timeval *t,
 										int times,
@@ -169,7 +174,7 @@ int EmulNet::ENrecv(Address *myaddr,
 	{
 		emsg = emulnet.buff[i];
 
-		if (0 == strcmp(emsg->to.addr, myaddr->addr))
+		if (0 == strcmp(emsg->to.addr, myaddr.addr))
 		{
 			sz = emsg->size;
 			tmp = (char *) malloc(sz * sizeof(char));
@@ -182,7 +187,7 @@ int EmulNet::ENrecv(Address *myaddr,
 
 			free(emsg);
 
-			int dst = *(int *)(myaddr->addr);
+			int dst = *(int *)(myaddr.addr);
 			int time = par->getcurrtime();
 
 			assert(dst <= Config::maxNodes);

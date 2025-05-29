@@ -11,7 +11,8 @@
  *
  * The `address` string is in the form `id:port`.
  */
-Address::Address(string address) {
+Address::Address(string address)
+{
   size_t pos = address.find(":");
   int id = stoi(address.substr(0, pos));
   short port = (short)stoi(address.substr(pos + 1, address.size()-pos-1));
@@ -57,7 +58,8 @@ bool Address::operator !=(const Address& anotherAddress)
  *
  * DESCRIPTION: Returns a string representing the address.
  */
-string Address::getAddress() const {
+string Address::getAddress() const
+{
   int id = 0;
   short port;
   memcpy(&id, &addr[0], sizeof(int));
@@ -70,7 +72,8 @@ string Address::getAddress() const {
  *
  * DESCRIPTION: Initializes the address to a default 0 address.
  */
-void Address::init() {
+void Address::init()
+{
   memset(&addr, 0, sizeof(addr));
 }
 

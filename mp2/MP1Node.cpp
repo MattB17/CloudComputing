@@ -54,7 +54,7 @@ int MP1Node::recvLoop()
     else
 		{
     	return emulNet->ENrecv(
-				&(memberNode->addr), enqueueWrapper, NULL, 1, &(memberNode->mp1q));
+				memberNode->addr, enqueueWrapper, NULL, 1, &(memberNode->mp1q));
     }
 }
 
@@ -129,7 +129,7 @@ int MP1Node::introduceSelfToGroup(Address& joinaddr)
     // send JOIN_REQUEST message to introducer member
 		// you send from your own address to the joinaddr, specifying the msg
 		// and its size
-    emulNet->ENsend(&memberNode->addr, &joinaddr,
+    emulNet->ENsend(memberNode->addr, joinaddr,
 					          joinMsg.getMessage(), joinMsg.getMessageSize());
   }
 
@@ -244,7 +244,7 @@ bool MP1Node::recvCallBack(char *data, int size)
 				                                MembershipMessageType::JOIN_REPLY,
 																				&memberNode->heartbeat);
 
-		  emulNet->ENsend(&(memberNode->addr), &senderAddr,
+		  emulNet->ENsend(memberNode->addr, senderAddr,
 		                  joinMsg.getMessage(), joinMsg.getMessageSize());
 		  logEvent(
 			  "Sending reply message for join request to %d.%d.%d.%d:%d", senderAddr);
@@ -469,7 +469,7 @@ void MP1Node::sendGossip(std::vector<MemberListEntry>& activeNodes,
 		{
 			continue;
 		}
-		emulNet->ENsend(&memberNode->addr, &destAddr,
+		emulNet->ENsend(memberNode->addr, destAddr,
 										msg, gossipMsg->getMessageSize());
 		logEvent("Sending gossip message to %d.%d.%d.%d:%d", destAddr);
 	}
