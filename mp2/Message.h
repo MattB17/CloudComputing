@@ -13,9 +13,9 @@
 // enum of replica types
 enum ReplicaType
 {
-  PRIMARY,
-  SECONDARY,
-  TERTIARY
+  PRIMARY = 0,
+  SECONDARY = 1,
+  TERTIARY = 2
 };
 
 enum MembershipMessageType

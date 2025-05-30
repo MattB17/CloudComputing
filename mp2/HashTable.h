@@ -21,17 +21,17 @@
  */
 class HashTable {
 private:
-	std::map<string, string> hashTable;
+	std::map<std::string, std::string> hashTable;
 public:
 	HashTable();
-	bool create(string key, string value);
-	string read(string key);
-	bool update(string key, string newValue);
-	bool deleteKey(string key);
+	bool create(std::string& key, std::string& value);
+	string read(const std::string& key);
+	bool update(const std::string& key, string newValue);
+	bool deleteKey(const std::string& key);
 	bool isEmpty();
 	unsigned long currentSize();
 	void clear();
-	unsigned long count(string key);
+	unsigned long count(const std::string& key);
 	virtual ~HashTable();
 };
 

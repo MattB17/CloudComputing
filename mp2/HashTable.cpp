@@ -21,7 +21,7 @@ HashTable::~HashTable() {}
  * true on SUCCESS
  * false in FAILURE
  */
-bool HashTable::create(string key, string value)
+bool HashTable::create(std::string& key, std::string& value)
 {
 	hashTable.emplace(key, value);
 	return true;
@@ -36,7 +36,7 @@ bool HashTable::create(string key, string value)
  * string value if found
  * else it returns an empty string
  */
-std::string HashTable::read(string key)
+std::string HashTable::read(const std::string& key)
 {
 	std::map<string, string>::iterator itr = hashTable.find(key);
 	if (itr != hashTable.end())
@@ -59,7 +59,8 @@ std::string HashTable::read(string key)
  * true on SUCCESS (when the key exists and is updated)
  * false on FAILURE (if the key doesn't exist)
  */
-bool HashTable::update(string key, string newValue) {
+bool HashTable::update(const std::string& key, std::string newValue)
+{
 	std::map<string, string>::iterator itr = hashTable.find(key);
 
 	if (itr == hashTable.end())
@@ -81,15 +82,18 @@ bool HashTable::update(string key, string newValue) {
  * true on SUCCESS (if key is found and deleted)
  * false on FAILURE (if key is not found or fail to delete)
  */
-bool HashTable::deleteKey(string key) {
+bool HashTable::deleteKey(const std::string& key)
+{
 	uint eraseCount = 0;
 
-	if (read(key).empty()) {
+	if (read(key).empty())
+	{
 		// Key not found
 		return false;
 	}
 	eraseCount = hashTable.erase(key);
-	if ( eraseCount < 1 ) {
+	if (eraseCount < 1)
+	{
 		// Could not erase
 		return false;
 	}
@@ -142,7 +146,7 @@ void HashTable::clear()
  * RETURNS:
  * unsigned long count (Should be always 1)
  */
-unsigned long HashTable::count(string key)
+unsigned long HashTable::count(const std::string& key)
 {
 	return (unsigned long)(hashTable.count(key));
 }

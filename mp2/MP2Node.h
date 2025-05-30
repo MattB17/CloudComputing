@@ -98,14 +98,14 @@ public:
 	// ring functionalities
 	void updateRing();
 	vector<Node> getMembershipList();
-	size_t hashFunction(string key);
+	size_t hashFunction(std::string key);
 	void findNeighbors();
 
 	// client side CRUD APIs
-	void clientCreate(string key, string value);
-	void clientRead(string key);
-	void clientUpdate(string key, string value);
-	void clientDelete(string key);
+	void clientCreate(std::string key, std::string value);
+	void clientRead(std::string key);
+	void clientUpdate(std::string key, std::string value);
+	void clientDelete(std::string key);
 
 	// receive messages from Emulnet
 	bool recvLoop();
@@ -118,13 +118,15 @@ public:
 	void dispatchMessages(Message message);
 
 	// find the addresses of nodes that are responsible for a key
-	vector<Node> findNodes(string key);
+	vector<Node> findNodes(std::string key);
 
 	// server
-	bool createKeyValue(string key, string value, ReplicaType replica);
-	string readKey(string key);
-	bool updateKeyValue(string key, string value, ReplicaType replica);
-	bool deletekey(string key);
+	bool createKeyValue(std::string key, std::string value, ReplicaType replica);
+	string readKey(const std::string& key);
+	bool updateKeyValue(const std::string& key,
+		                  std::string value,
+											ReplicaType replica);
+	bool deletekey(const std::string& key);
 
 	// stabilization protocol - handle multiple failures
 	void stabilizationProtocol();

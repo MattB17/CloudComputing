@@ -41,7 +41,7 @@ MP2Node::~MP2Node() {}
  */
 void MP2Node::updateRing()
 {
-	vector<Node> currMemList;
+	std::vector<Node> currMemList;
 	// Indicates whether the ring has changed
 	bool change = false;
 
@@ -70,7 +70,8 @@ void MP2Node::updateRing()
 	{
 		// Otherwise, we iterate through until either we find a node that differs
 		// or all nodes match.
-		for (size_t ringIdx = 0; ringIdx < currMemList.size(); ringIdx++) {
+		for (size_t ringIdx = 0; ringIdx < currMemList.size(); ringIdx++)
+		{
 			if (currMemList[ringIdx].nodeHashCode != this->ring[ringIdx].nodeHashCode)
 			{
 				change = true;
@@ -133,7 +134,7 @@ std::vector<Node> MP2Node::getMembershipList()
  * RETURNS:
  * size_t position on the ring
  */
-size_t MP2Node::hashFunction(string key)
+size_t MP2Node::hashFunction(std::string key)
 {
 	std::hash<string> hashFunc;
 	size_t ret = hashFunc(key);
@@ -149,18 +150,15 @@ size_t MP2Node::hashFunction(string key)
  * 				2) Finds the replicas of this key
  * 				3) Sends a message to the replica
  */
-void MP2Node::clientCreate(string key, string value)
+void MP2Node::clientCreate(std::string key, std::string value)
 {
 	std::vector<Node> replicas = findNodes(key);
-	std::vector<ReplicaType> replicaTypes = {
-		ReplicaType::PRIMARY, ReplicaType::SECONDARY, ReplicaType::TERTIARY};
 
   // Get an ID for the current transaction.
 	int currTransId = getTransactionId();
 
-
   // Iterate through the replicas.
-	for (int rIdx = 0; rIdx < 3; rIdx++) {
+	for (int rIdx = 0; rIdx < replicas.size(); rIdx++) {
 		// Construct create message for the replica.
 		Message cMsg = Message(
 			currTransId,
@@ -168,7 +166,7 @@ void MP2Node::clientCreate(string key, string value)
 		  KVMessageType::CREATE,
 		  key,
 		  value,
-		  replicaTypes[rIdx]);
+		  static_cast<ReplicaType>(rIdx));
 		// Send the create message to the replica.
 		this->sendMsg(replicas[rIdx].nodeAddress, cMsg);
 	}
@@ -187,7 +185,7 @@ void MP2Node::clientCreate(string key, string value)
  * 				2) Finds the replicas of this key
  * 				3) Sends a message to the replica
  */
-void MP2Node::clientRead(string key)
+void MP2Node::clientRead(std::string key)
 {
 	std::vector<Node> replicas = findNodes(key);
 
@@ -195,7 +193,7 @@ void MP2Node::clientRead(string key)
 	int currTransId = getTransactionId();
 
 	// Iterate through the replicas.
-	for (int rIdx = 0; rIdx < replicas.size(); rIdx++)
+	for (auto rItr = replicas.begin(); rItr != replicas.end(); rItr++)
 	{
 		// Construct message for the replica.
 		Message rMsg = Message(
@@ -205,7 +203,7 @@ void MP2Node::clientRead(string key)
 			key);
 
 		// Send the read message to the replica.
-		this->sendMsg(replicas[rIdx].nodeAddress, rMsg);
+		this->sendMsg(rItr->nodeAddress, rMsg);
 	}
 
 	// Keep a record of the pending read transaction.
@@ -222,16 +220,14 @@ void MP2Node::clientRead(string key)
  * 				2) Finds the replicas of this key
  * 				3) Sends a message to the replica
  */
-void MP2Node::clientUpdate(string key, string value)
+void MP2Node::clientUpdate(std::string key, std::string value)
 {
 	std::vector<Node> replicas = this->findNodes(key);
-	std::vector<ReplicaType> replicaTypes = {
-		ReplicaType::PRIMARY, ReplicaType::SECONDARY, ReplicaType::TERTIARY};
 
 	// Get the transaction id for this transaction.
 	int currTransId = this->getTransactionId();
 
-	for (int rIdx = 0; rIdx < 3; rIdx++)
+	for (int rIdx = 0; rIdx < replicas.size(); rIdx++)
 	{
 		// Construct the message to send to the replica
 		Message rMsg = Message(
@@ -240,7 +236,7 @@ void MP2Node::clientUpdate(string key, string value)
 			KVMessageType::UPDATE,
 			key,
 			value,
-			replicaTypes[rIdx]);
+			static_cast<ReplicaType>(rIdx));
 
 		// Send the message to the replica
 		this->sendMsg(replicas[rIdx].nodeAddress, rMsg);
@@ -260,14 +256,15 @@ void MP2Node::clientUpdate(string key, string value)
  * 				2) Finds the replicas of this key
  * 				3) Sends a message to the replica
  */
-void MP2Node::clientDelete(string key){
+void MP2Node::clientDelete(std::string key)
+{
 	std::vector<Node> replicas = findNodes(key);
 
   // Get the transaction ID for this transaction.
 	int currTransId = getTransactionId();
 
   // Iterate through the replicas.
-	for (int rIdx = 0; rIdx < replicas.size(); rIdx++)
+	for (auto rItr = replicas.begin(); rItr != replicas.end(); rItr++)
 	{
 		// Construct the delete message for the replica.
 		Message dMsg = Message(
@@ -277,7 +274,7 @@ void MP2Node::clientDelete(string key){
 			key);
 
 		// Send the delete message to the replica.
-		this->sendMsg(replicas[rIdx].nodeAddress, dMsg);
+		this->sendMsg(rItr->nodeAddress, dMsg);
 	}
 
 	// Keep a record of the pending transaction.
@@ -294,7 +291,10 @@ void MP2Node::clientDelete(string key){
  * 			   	1) Inserts key value into the local hash table
  * 			   	2) Return true or false based on success or failure
  */
-bool MP2Node::createKeyValue(string key, string value, ReplicaType replica) {
+bool MP2Node::createKeyValue(std::string key,
+	                           std::string value,
+														 ReplicaType replica)
+{
 	bool created = this->ht->create(key, value);
 
 	// If it was successfully created we want to also track its metadata.
@@ -314,7 +314,8 @@ bool MP2Node::createKeyValue(string key, string value, ReplicaType replica) {
  * 			    1) Read key from local hash table
  * 			    2) Return value
  */
-string MP2Node::readKey(string key) {
+string MP2Node::readKey(const std::string& key)
+{
 	return this->ht->read(key);
 }
 
@@ -326,7 +327,10 @@ string MP2Node::readKey(string key) {
  * 				1) Update the key to the new value in the local hash table
  * 				2) Return true or false based on success or failure
  */
-bool MP2Node::updateKeyValue(string key, string value, ReplicaType replica) {
+bool MP2Node::updateKeyValue(const std::string& key,
+	                           std::string value,
+														 ReplicaType replica)
+{
 	bool updated = this->ht->update(key, value);
 
   // If it was updated record the replica type.
@@ -353,7 +357,8 @@ bool MP2Node::updateKeyValue(string key, string value, ReplicaType replica) {
  * 				1) Delete the key from the local hash table
  * 				2) Return true or false based on success or failure
  */
-bool MP2Node::deletekey(string key) {
+bool MP2Node::deletekey(const std::string& key)
+{
 	bool deleted = this->ht->deleteKey(key);
 
 	if (deleted)
@@ -372,7 +377,8 @@ bool MP2Node::deletekey(string key) {
  * 				1) Pops messages from the queue
  * 				2) Handles the messages according to message types
  */
-void MP2Node::checkMessages() {
+void MP2Node::checkMessages()
+{
 	char * data;
 	int size;
 
@@ -381,7 +387,8 @@ void MP2Node::checkMessages() {
 	 */
 
 	// dequeue all messages and handle them
-	while ( !memberNode->mp2q.empty() ) {
+	while (!memberNode->mp2q.empty())
+	{
 		/*
 		 * Pop a message from the queue
 		 */
@@ -430,13 +437,16 @@ void MP2Node::checkMessages() {
  * DESCRIPTION: Find the replicas of the given keyfunction
  * 				This function is responsible for finding the replicas of a key
  */
-vector<Node> MP2Node::findNodes(string key) {
+vector<Node> MP2Node::findNodes(string key)
+{
 	size_t pos = hashFunction(key);
-	vector<Node> addr_vec;
-	if (ring.size() >= 3) {
+	std::vector<Node> addr_vec;
+	if (ring.size() >= 3)
+	{
 		// if pos <= min || pos > max, the leader (primary replica) is the min
 		if (pos <= ring.at(0).getHashCode() ||
-		    pos > ring.at(ring.size()-1).getHashCode()) {
+		    pos > ring.at(ring.size()-1).getHashCode())
+		{
 			addr_vec.emplace_back(ring.at(0));
 			addr_vec.emplace_back(ring.at(1));
 			addr_vec.emplace_back(ring.at(2));
